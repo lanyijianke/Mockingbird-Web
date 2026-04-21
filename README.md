@@ -11,7 +11,7 @@ Knowledge Web 是 Mockingbird 的知识展示子站（Next.js 16），负责文�
 启动：
 
 ```bash
-cd Mockingbird_Knowledge_Web
+cd Mockingbird_Web
 npm install
 npm run dev
 ```
@@ -23,7 +23,7 @@ npm run dev
 提交前至少执行：
 
 ```bash
-cd Mockingbird_Knowledge_Web
+cd Mockingbird_Web
 npm run lint
 npm run test
 npm run build
