@@ -2,7 +2,7 @@
  * 排行榜直采模块 — 直接从源站抓取排行榜数据
  * 移植自 Crawler 子系统的 github-trending.ts / producthunt.ts / skills-sh.ts
  *
- * 数据不再经过 Crawler → Console 中转，由 Knowledge Web 自行直采。
+ * 数据不再经过中间服务转发，由 Knowledge Web 自行直采。
  */
 import * as cheerio from 'cheerio';
 import type { GitHubTrending, ProductHuntRanking, SkillsShRanking } from '@/lib/types';

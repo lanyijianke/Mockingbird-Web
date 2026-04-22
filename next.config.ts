@@ -1,19 +1,7 @@
 import type { NextConfig } from "next";
+import { buildContentSecurityPolicy } from "./lib/security/csp";
 
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com",
-  "connect-src 'self' https:",
-  "media-src 'self' https: blob:",
-  "frame-ancestors 'self'",
-  "form-action 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "upgrade-insecure-requests",
-].join("; ");
+const contentSecurityPolicy = buildContentSecurityPolicy(process.env.NODE_ENV !== 'production');
 
 const nextConfig: NextConfig = {
   devIndicators: false,

@@ -1,110 +1,99 @@
-import { query, queryOne, queryScalar, execute } from '@/lib/db';
-import { ArticleListItem, ArticleDetail, ArticleStatus, ArticleRow, PagedResult } from '@/lib/types';
-import { getCategoryName } from '@/lib/categories';
-import fs from 'fs/promises';
-import path from 'path';
 import matter from 'gray-matter';
+import {
+    buildArticleAssetUrl,
+    fetchAggregatedArticleDirectory,
+    fetchArticleMarkdown,
+    type ArticleDirectoryEntry,
+} from '@/lib/articles/article-directory';
+import { getArticleDetailPath } from '@/lib/articles/article-route-paths';
+import { ArticleCategory, ArticleDetail, ArticleListItem, ArticleStatus, PagedResult } from '@/lib/types';
 
-// ════════════════════════════════════════════════════════════════
-// 文章服务 — 对应 ArticleService.cs + ArticleRepository.cs
-// 分类已从 DB Categories 表迁移至静态配置文件
-// ════════════════════════════════════════════════════════════════
-
-// ── 内存缓存 (统一 MemoryCache) ───────────────────────────────
-import { MemoryCache } from '@/lib/utils/memory-cache';
-
-const cache = new MemoryCache(10 * 60 * 1000); // 10 分钟 TTL
-let cacheVersion = 0;
-
-function clearArticleCache(slug?: string) {
-    cache.delete('articles_all');
-    if (slug) cache.delete(`article_${slug}`);
-    cacheVersion++;
+function normalizeSite(site?: string): string {
+    return site?.trim() || 'ai';
 }
 
-// ── 文章内容目录 ─────────────────────────────────────────────
-const ARTICLES_DIR = process.env.CONTENT_ARTICLES_DIR || './public/content/articles';
-
-// ── 行数据 → DTO 映射 ───────────────────────────────────────
-function rowToListItem(row: ArticleRow): ArticleListItem {
+function mapEntryToListItem(entry: ArticleDirectoryEntry): ArticleListItem {
     return {
-        id: row.Id,
-        title: row.Title,
-        slug: row.Slug,
-        summary: row.Summary || '',
-        category: row.Category || 'industry-news',
-        status: row.Status as ArticleStatus,
-        coverUrl: row.CoverUrl || null,
-        createdAt: row.CreatedAt ? new Date(row.CreatedAt).toISOString() : '',
-        viewCount: row.ViewCount || 0,
+        id: entry.id,
+        site: entry.site,
+        title: entry.title,
+        slug: entry.slug,
+        summary: entry.summary,
+        category: entry.category,
+        categoryName: entry.categoryName,
+        status: ArticleStatus.Published,
+        coverUrl: entry.coverUrl,
+        createdAt: new Date(entry.publishedAt).toISOString(),
+        updatedAt: entry.updatedAt ? new Date(entry.updatedAt).toISOString() : null,
+        viewCount: null,
     };
 }
 
-interface ArticleSitemapRow {
-    Slug: string;
-    LastModified: string | null;
+async function getSiteEntries(site?: string): Promise<ArticleDirectoryEntry[]> {
+    const normalizedSite = normalizeSite(site);
+    const snapshot = await fetchAggregatedArticleDirectory();
+    return snapshot.entries.filter((entry) => entry.site === normalizedSite);
 }
 
-// ════════════════════════════════════════════════════════════════
-// 公开 API
-// ════════════════════════════════════════════════════════════════
+function filterEntries(
+    entries: ArticleDirectoryEntry[],
+    category?: string,
+    searchQuery?: string
+): ArticleDirectoryEntry[] {
+    const normalizedSearch = searchQuery?.trim().toLowerCase();
 
-/** 获取 Top N 文章 (对应 GetTopArticlesAsync) */
-export async function getTopArticles(count: number = 9): Promise<ArticleListItem[]> {
-    const cacheKey = `articles_top_${count}_v${cacheVersion}`;
-    const cached = cache.get(cacheKey) as ArticleListItem[] | null;
-    if (cached) return cached;
+    return entries.filter((entry) => {
+        if (category && entry.category !== category) return false;
+        if (!normalizedSearch) return true;
+        const haystack = `${entry.title} ${entry.summary}`.toLowerCase();
+        return haystack.includes(normalizedSearch);
+    });
+}
 
-    const rows = await query<ArticleRow>(
-        'SELECT * FROM Articles ORDER BY CreatedAt DESC LIMIT ?',
-        [count]
+function rewriteRelativeMarkdownAssets(content: string, entry: ArticleDirectoryEntry): string {
+    return content.replace(
+        /!\[([^\]]*)\]\((?!https?:\/\/|data:|mailto:|#)([^)]+)\)/g,
+        (_match, alt: string, relativePath: string) => {
+            const sanitizedRelativePath = relativePath.trim().replace(/^\.\/+/, '');
+            return `![${alt}](${buildArticleAssetUrl(entry.site, entry.slug, sanitizedRelativePath)})`;
+        }
     );
-    const result = rows.map(r => rowToListItem(r));
-    cache.set(cacheKey, result);
-    return result;
 }
 
-/** 分页查询文章 (对应 GetPagedArticlesAsync) */
+export async function getArticleCategories(site: string = 'ai'): Promise<ArticleCategory[]> {
+    const snapshot = await fetchAggregatedArticleDirectory();
+    return snapshot.categoriesBySite[normalizeSite(site)] || [];
+}
+
+export async function getArticleCategoryName(site: string, category: string): Promise<string> {
+    const categories = await getArticleCategories(site);
+    return categories.find((item) => item.code === category)?.name || category;
+}
+
+/** 获取 Top N 文章 */
+export async function getTopArticles(
+    count: number = 9,
+    options?: { site?: string }
+): Promise<ArticleListItem[]> {
+    const entries = await getSiteEntries(options?.site);
+    return entries.slice(0, count).map(mapEntryToListItem);
+}
+
+/** 分页查询文章 */
 export async function getPagedArticles(
     page: number = 1,
     pageSize: number = 12,
     category?: string,
-    searchQuery?: string
+    searchQuery?: string,
+    options?: { site?: string }
 ): Promise<PagedResult<ArticleListItem>> {
     const offset = (page - 1) * pageSize;
-    const conditions: string[] = ['1=1'];
-    const params: (string | number)[] = [];
-
-    if (category) {
-        conditions.push('Category = ?');
-        params.push(category);
-    }
-
-    if (searchQuery) {
-        conditions.push('(Title LIKE ? OR Summary LIKE ?)');
-        const pattern = `%${searchQuery}%`;
-        params.push(pattern, pattern);
-    }
-
-    const whereClause = conditions.join(' AND ');
-
-    // 查询总数
-    const totalCount = await queryScalar<number>(
-        `SELECT COUNT(*) FROM Articles WHERE ${whereClause}`,
-        params
-    ) ?? 0;
-
-    // 查询分页数据
-    const rows = await query<ArticleRow>(
-        `SELECT Id, Title, Slug, Summary, Category, Status, CoverUrl, CreatedAt, ViewCount 
-     FROM Articles 
-     WHERE ${whereClause}
-     ORDER BY CreatedAt DESC
-     LIMIT ?, ?`,
-        [...params, offset, pageSize]
-    );
-
-    const items = rows.map(r => rowToListItem(r));
+    const entries = await getSiteEntries(options?.site);
+    const filteredEntries = filterEntries(entries, category, searchQuery);
+    const totalCount = filteredEntries.length;
+    const items = filteredEntries
+        .slice(offset, offset + pageSize)
+        .map(mapEntryToListItem);
 
     return {
         items,
@@ -115,77 +104,59 @@ export async function getPagedArticles(
     };
 }
 
-/** 根据 Slug 获取文章详情 (对应 GetArticleBySlugAsync) */
-export async function getArticleBySlug(slug: string): Promise<ArticleDetail | null> {
-    const cacheKey = `article_${slug}`;
-    const cached = cache.get(cacheKey) as ArticleDetail | null;
-    if (cached) return cached;
+/** 根据 Slug 获取文章详情 */
+export async function getArticleBySlug(
+    slug: string,
+    options?: { site?: string }
+): Promise<ArticleDetail | null> {
+    const entries = await getSiteEntries(options?.site);
+    const entry = entries.find((item) => item.slug === slug);
+    if (!entry) return null;
 
-    const row = await queryOne<ArticleRow>(
-        'SELECT * FROM Articles WHERE Slug = ?',
-        [slug]
-    );
-    if (!row) return null;
+    const markdown = await fetchArticleMarkdown(entry);
+    const { content } = matter(markdown);
 
-    // SSG: 从文件系统读取正文 Markdown
-    const content = await loadContentFromFile(slug);
-
-    const detail: ArticleDetail = {
-        id: row.Id,
-        title: row.Title,
-        slug: row.Slug,
-        summary: row.Summary || '',
-        content,
-        renderedHtml: null, // Next.js 端用 react-markdown 实时渲染
-        category: row.Category || 'industry-news',
-        status: row.Status as ArticleStatus,
-        coverUrl: row.CoverUrl || null,
-        seoTitle: row.SeoTitle || null,
-        seoDescription: row.SeoDescription || null,
-        seoKeywords: row.SeoKeywords || null,
-        createdAt: row.CreatedAt ? new Date(row.CreatedAt).toISOString() : '',
-        updatedAt: row.UpdatedAt ? new Date(row.UpdatedAt).toISOString() : null,
-        viewCount: row.ViewCount || 0,
+    return {
+        ...mapEntryToListItem(entry),
+        content: rewriteRelativeMarkdownAssets(content.trim(), entry),
+        renderedHtml: null,
+        author: entry.author,
+        originalUrl: entry.originalUrl,
+        sourcePlatform: entry.sourcePlatform,
+        type: entry.type,
+        seoTitle: entry.seoTitle || null,
+        seoDescription: entry.seoDescription || null,
+        seoKeywords: entry.seoKeywords || null,
     };
-
-    cache.set(cacheKey, detail);
-    return detail;
 }
 
 /** 获取所有文章 Slug (用于 SSG generateStaticParams) */
-export async function getAllSlugs(): Promise<string[]> {
-    const rows = await query<ArticleRow>('SELECT Slug FROM Articles ORDER BY CreatedAt DESC');
-    return rows.map(r => r.Slug);
+export async function getAllSlugs(site: string = 'ai'): Promise<string[]> {
+    const entries = await getSiteEntries(site);
+    return entries.map((entry) => entry.slug);
 }
 
 export interface ArticleSitemapEntry {
+    site: string;
     slug: string;
+    path: string;
     lastModified: string | null;
 }
 
 /** 获取 sitemap 所需的文章 URL 与真实更新时间 */
 export async function getArticleSitemapEntries(): Promise<ArticleSitemapEntry[]> {
-    const rows = await query<ArticleSitemapRow>(
-        `SELECT Slug, COALESCE(UpdatedAt, CreatedAt) AS LastModified
-         FROM Articles
-         ORDER BY CreatedAt DESC`
-    );
-    return rows.map((row) => ({
-        slug: row.Slug,
-        lastModified: row.LastModified,
+    const snapshot = await fetchAggregatedArticleDirectory();
+    return snapshot.entries.map((entry) => ({
+        site: entry.site,
+        slug: entry.slug,
+        path: getArticleDetailPath(entry.site, entry.slug),
+        lastModified: entry.updatedAt || entry.publishedAt,
     }));
 }
 
-/** 阅读量追踪 (对应 TrackViewAsync) */
+/** 阅读量追踪：GitHub 源模式下兼容性 no-op */
 export async function trackView(slug: string): Promise<boolean> {
-    const result = await execute(
-        'UPDATE Articles SET ViewCount = ViewCount + 1 WHERE Slug = ?',
-        [slug]
-    );
-    if (result.affectedRows > 0) {
-        clearArticleCache(slug);
-        return true;
-    }
+    void slug;
     return false;
 }
 
@@ -193,45 +164,18 @@ export async function trackView(slug: string): Promise<boolean> {
 export async function getRelatedArticles(
     category: string,
     excludeSlug: string,
-    limit: number = 6
+    limit: number = 6,
+    options?: { site?: string }
 ): Promise<ArticleListItem[]> {
-    const cacheKey = `articles_related_${category}_${excludeSlug}_${limit}_v${cacheVersion}`;
-    const cached = cache.get(cacheKey) as ArticleListItem[] | null;
-    if (cached) return cached;
-
-    const rows = await query<ArticleRow>(
-        'SELECT * FROM Articles WHERE Category = ? AND Slug != ? ORDER BY CreatedAt DESC LIMIT ?',
-        [category, excludeSlug, limit]
-    );
-    const result = rows.map(r => rowToListItem(r));
-    cache.set(cacheKey, result);
-    return result;
+    const entries = await getSiteEntries(options?.site);
+    return entries
+        .filter((entry) => entry.category === category && entry.slug !== excludeSlug)
+        .slice(0, limit)
+        .map(mapEntryToListItem);
 }
 
 /** 获取文章总数 */
-export async function getTotalCount(): Promise<number> {
-    return (await queryScalar<number>('SELECT COUNT(*) FROM Articles')) ?? 0;
+export async function getTotalCount(options?: { site?: string }): Promise<number> {
+    const entries = await getSiteEntries(options?.site);
+    return entries.length;
 }
-
-// ── 内部辅助 ─────────────────────────────────────────────────
-
-/**
- * 从文件系统加载文章正文 Markdown
- * 路径规则: {articlesDir}/{slug}/{slug}.md
- * 对应 ArticleService.LoadContentFromFileAsync
- */
-async function loadContentFromFile(slug: string): Promise<string> {
-    const filePath = path.join(ARTICLES_DIR, slug, `${slug}.md`);
-    try {
-        const fullContent = await fs.readFile(filePath, 'utf-8');
-        // 使用 gray-matter 剥离 YAML Frontmatter
-        const { content } = matter(fullContent);
-        return content.trim();
-    } catch {
-        console.warn(`[ArticleService] Content file not found: ${filePath}`);
-        return '';
-    }
-}
-
-// 导出 getCategoryName 以便页面使用
-export { getCategoryName };

@@ -35,7 +35,8 @@ function chunkArray<T>(items: T[], chunkSize: number): T[][] {
 function buildStaticSitemapEntries(now: string): SitemapUrlEntry[] {
     return [
         { url: BASE_URL, lastModified: now, changeFrequency: 'daily', priority: 1.0 },
-        { url: `${BASE_URL}/articles`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+        { url: `${BASE_URL}/ai/articles`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+        { url: `${BASE_URL}/finance/articles`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
         { url: `${BASE_URL}/prompts`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
         { url: `${BASE_URL}/rankings/github`, lastModified: now, changeFrequency: 'daily', priority: 0.6 },
         { url: `${BASE_URL}/rankings/producthunt`, lastModified: now, changeFrequency: 'daily', priority: 0.6 },
@@ -81,7 +82,7 @@ export async function buildSitemapChunkEntries(chunkName: string): Promise<Sitem
         if (index < 0 || index >= chunks.length) return null;
 
         return chunks[index].map((article) => ({
-            url: `${BASE_URL}/articles/${article.slug}`,
+            url: `${BASE_URL}${article.path}`,
             lastModified: toIsoOrFallback(article.lastModified, now),
             changeFrequency: 'weekly',
             priority: 0.7,

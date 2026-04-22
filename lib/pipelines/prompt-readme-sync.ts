@@ -5,7 +5,7 @@ import { logger } from '@/lib/utils/logger';
 import {
     ensureDir,
     type PipelineReport, createEmptyReport,
-} from './pipeline-base';
+} from './pipeline-shared';
 import { downloadMedia, downloadVideoViaYtDlp, getMediaDir } from './media-pipeline';
 import { extractFirstFrame } from '@/lib/utils/media-processor';
 
@@ -54,6 +54,105 @@ interface ParsedPrompt {
     originalSourceUrl?: string;
 }
 
+interface ExistingPromptRecord {
+    Id: number;
+    CoverImageUrl: string | null;
+    VideoPreviewUrl: string | null;
+    ImagesJson: string | null;
+}
+
+interface ResolvedPromptMedia {
+    coverImageUrl: string | null;
+    videoPreviewUrl: string | null;
+    imagesJson: string | null;
+}
+
+export function inferCloudflareVideoDownloadUrl(imageUrl: string): string | null {
+    try {
+        const parsed = new URL(imageUrl);
+        if (!parsed.hostname.endsWith('cloudflarestream.com')) {
+            return null;
+        }
+
+        const match = parsed.pathname.match(/^\/([a-f0-9]+)\/thumbnails\//i);
+        if (!match) {
+            return null;
+        }
+
+        return `https://${parsed.hostname}/${match[1]}/downloads/default.mp4`;
+    } catch {
+        return null;
+    }
+}
+
+async function resolvePromptMedia(
+    prompt: ParsedPrompt,
+    mediaDir: string,
+    existing?: ExistingPromptRecord
+): Promise<ResolvedPromptMedia> {
+    let coverImageUrl = existing?.CoverImageUrl || null;
+    let videoPreviewUrl = existing?.VideoPreviewUrl || null;
+    let imagesJson = existing?.ImagesJson || null;
+
+    if ((!coverImageUrl || !imagesJson) && prompt.images.length > 0) {
+        const localImages: string[] = [];
+
+        for (const imgUrl of prompt.images) {
+            if (!imgUrl.startsWith('http')) continue;
+
+            const localPath = await downloadMedia(imgUrl, mediaDir);
+            if (localPath && !localPath.startsWith('http')) {
+                localImages.push(localPath);
+                if (!coverImageUrl) coverImageUrl = localPath;
+            }
+        }
+
+        if (!imagesJson && localImages.length > 0) {
+            imagesJson = JSON.stringify(localImages);
+        }
+    }
+
+    if (!videoPreviewUrl && prompt.videos.length > 0) {
+        const videoUrl = prompt.videos[0];
+        if (videoUrl.startsWith('http')) {
+            console.log(`[DEBUG] 处理视频, 原始链接: ${prompt.originalSourceUrl}`);
+
+            if (
+                prompt.originalSourceUrl &&
+                (prompt.originalSourceUrl.includes('x.com') || prompt.originalSourceUrl.includes('twitter.com'))
+            ) {
+                logger.info('PromptSync', `发现原始来源 URL，尝试用 yt-dlp 获取音轨视频: ${prompt.originalSourceUrl}`);
+                const ytDlpResult = await downloadVideoViaYtDlp(prompt.originalSourceUrl, mediaDir);
+                if (ytDlpResult) {
+                    videoPreviewUrl = ytDlpResult;
+                }
+            }
+
+            if (!videoPreviewUrl) {
+                const directPath = await downloadMedia(videoUrl, mediaDir);
+                if (directPath && !directPath.startsWith('http')) {
+                    videoPreviewUrl = directPath;
+                }
+            }
+        }
+    }
+
+    if (!coverImageUrl && videoPreviewUrl && !videoPreviewUrl.startsWith('http')) {
+        const absoluteVideoPath = path.join(mediaDir, path.basename(videoPreviewUrl));
+        logger.info('PromptSync', `无图片封面，从视频提取首帧: ${prompt.rawTitle}`);
+        const coverFileName = await extractFirstFrame(absoluteVideoPath, mediaDir);
+        if (coverFileName) {
+            coverImageUrl = `/content/prompts/media/${coverFileName}`;
+        }
+    }
+
+    return {
+        coverImageUrl,
+        videoPreviewUrl,
+        imagesJson,
+    };
+}
+
 export async function syncAllAsync(): Promise<PipelineReport> {
     const report = createEmptyReport();
     const repos = loadRepoConfigs();
@@ -98,15 +197,10 @@ async function syncSingleRepoAsync(config: RepoConfig): Promise<PipelineReport> 
     for (const prompt of prompts) {
         try {
             // 检查是否已存在（按 sourceUrl 去重）
-            const existing = await queryOne(
-                'SELECT Id FROM Prompts WHERE SourceUrl = ?',
+            const existing = await queryOne<ExistingPromptRecord>(
+                'SELECT Id, CoverImageUrl, VideoPreviewUrl, ImagesJson FROM Prompts WHERE SourceUrl = ?',
                 [prompt.sourceUrl]
             );
-
-            if (existing) {
-                report.skipped++;
-                continue;
-            }
 
             // 直接使用原始标题和描述，不调用 AI 翻译
             const title = prompt.rawTitle;
@@ -115,56 +209,38 @@ async function syncSingleRepoAsync(config: RepoConfig): Promise<PipelineReport> 
             // 使用仓库配置中指定的分类
             const category = config.category;
 
-            // ─── 媒体资源处理（与 CSV 管线共用 media-pipeline） ───
-            let coverImageUrl: string | null = null;
-            let videoPreviewUrl: string | null = null;
-            const localImages: string[] = [];
+            const media = await resolvePromptMedia(prompt, mediaDir, existing || undefined);
 
-            // 下载图片资源（自动 WebP 压缩）
-            for (const imgUrl of prompt.images) {
-                if (imgUrl.startsWith('http')) {
-                    const localPath = await downloadMedia(imgUrl, mediaDir);
-                    if (localPath && !localPath.startsWith('http')) {
-                        localImages.push(localPath);
-                        if (!coverImageUrl) coverImageUrl = localPath;
-                    }
+            if (existing) {
+                const updates: string[] = [];
+                const updateArgs: Array<string | number | null> = [];
+
+                if (!existing.CoverImageUrl && media.coverImageUrl) {
+                    updates.push('CoverImageUrl = ?');
+                    updateArgs.push(media.coverImageUrl);
                 }
-            }
-
-            // 下载视频资源 — 优先 yt-dlp（合并音轨），fallback 到直接下载
-            if (prompt.videos.length > 0) {
-                const videoUrl = prompt.videos[0];
-                if (videoUrl.startsWith('http')) {
-                    console.log(`[DEBUG] 处理视频, 原始链接: ${prompt.originalSourceUrl}`);
-
-                    // 如果存在原始来源（如 Twitter 链接），优先用原始来源跑 yt-dlp 下载无损音视频
-                    if (prompt.originalSourceUrl &&
-                        (prompt.originalSourceUrl.includes('x.com') || prompt.originalSourceUrl.includes('twitter.com'))) {
-                        logger.info('PromptSync', `发现原始来源 URL，尝试用 yt-dlp 获取音轨视频: ${prompt.originalSourceUrl}`);
-                        const ytDlpResult = await downloadVideoViaYtDlp(prompt.originalSourceUrl, mediaDir);
-                        if (ytDlpResult) {
-                            videoPreviewUrl = ytDlpResult;
-                        }
-                    }
-
-                    // 如果 yt-dlp 失败或者不需要 yt-dlp，则直接下载 .mp4
-                    if (!videoPreviewUrl) {
-                        const directPath = await downloadMedia(videoUrl, mediaDir);
-                        if (directPath && !directPath.startsWith('http')) {
-                            videoPreviewUrl = directPath;
-                        }
-                    }
+                if (!existing.VideoPreviewUrl && media.videoPreviewUrl) {
+                    updates.push('VideoPreviewUrl = ?');
+                    updateArgs.push(media.videoPreviewUrl);
                 }
-            }
-
-            // 无封面但有视频 → 提取视频首帧作为封面
-            if (!coverImageUrl && videoPreviewUrl && !videoPreviewUrl.startsWith('http')) {
-                const absoluteVideoPath = path.join(mediaDir, path.basename(videoPreviewUrl));
-                logger.info('PromptSync', `无图片封面，从视频提取首帧: ${prompt.rawTitle}`);
-                const coverFileName = await extractFirstFrame(absoluteVideoPath, mediaDir);
-                if (coverFileName) {
-                    coverImageUrl = `/content/prompts/media/${coverFileName}`;
+                if (!existing.ImagesJson && media.imagesJson) {
+                    updates.push('ImagesJson = ?');
+                    updateArgs.push(media.imagesJson);
                 }
+
+                if (updates.length === 0) {
+                    report.skipped++;
+                    continue;
+                }
+
+                updates.push('UpdatedAt = datetime(\'now\')');
+                await execute(
+                    `UPDATE Prompts SET ${updates.join(', ')} WHERE Id = ?`,
+                    [...updateArgs, existing.Id]
+                );
+
+                report.updated++;
+                continue;
             }
 
             // 入库（含 VideoPreviewUrl）
@@ -174,9 +250,9 @@ async function syncSingleRepoAsync(config: RepoConfig): Promise<PipelineReport> 
                 [
                     title, prompt.rawTitle, description, prompt.content,
                     category, prompt.author, prompt.sourceUrl,
-                    coverImageUrl || null,
-                    videoPreviewUrl || null,
-                    localImages.length > 0 ? JSON.stringify(localImages) : null,
+                    media.coverImageUrl || null,
+                    media.videoPreviewUrl || null,
+                    media.imagesJson || null,
                 ]
             );
 
@@ -318,6 +394,16 @@ export function parseReadmeToPrompts(readme: string, repoUrl: string): ParsedPro
         const videoLinkRegex = /<a\s[^>]*href=["'](.*?\.mp4)["'][^>]*>/gi;
         while ((match = videoLinkRegex.exec(sectionContent)) !== null) {
             videos.push(match[1]);
+        }
+
+        if (videos.length === 0) {
+            const inferredVideoUrl = filteredImages
+                .map((imageUrl) => inferCloudflareVideoDownloadUrl(imageUrl))
+                .find((videoUrl): videoUrl is string => Boolean(videoUrl));
+
+            if (inferredVideoUrl) {
+                videos.push(inferredVideoUrl);
+            }
         }
 
         // 清理 "No. X: " 前缀后的标题

@@ -40,7 +40,7 @@ next-env.d.ts
 # local content
 public/content/
 /content/
-transmuter-workshop/
+raw-incoming/prompts/
 
 # sqlite data
 /data/

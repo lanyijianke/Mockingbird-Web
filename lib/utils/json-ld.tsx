@@ -24,7 +24,7 @@ export function buildWebSiteJsonLd(): object {
             '@type': 'SearchAction',
             target: {
                 '@type': 'EntryPoint',
-                urlTemplate: `${BASE_URL}/articles?q={search_term_string}`,
+                urlTemplate: `${BASE_URL}/ai/articles?q={search_term_string}`,
             },
             'query-input': 'required name=search_term_string',
         },
@@ -65,7 +65,7 @@ export function buildWebPageJsonLd(
 export interface ArticleJsonLdInput {
     title: string;
     summary?: string | null;
-    slug: string;
+    url: string;
     coverUrl?: string | null;
     createdAt: string;
     updatedAt?: string | null;
@@ -78,7 +78,7 @@ export function buildArticleJsonLd(article: ArticleJsonLdInput): object {
         '@type': 'Article',
         headline: article.title,
         description: article.summary || undefined,
-        url: `${BASE_URL}/articles/${article.slug}`,
+        url: article.url,
         image: article.coverUrl || undefined,
         datePublished: article.createdAt,
         dateModified: article.updatedAt || article.createdAt,
@@ -94,7 +94,7 @@ export function buildArticleJsonLd(article: ArticleJsonLdInput): object {
         },
         mainEntityOfPage: {
             '@type': 'WebPage',
-            '@id': `${BASE_URL}/articles/${article.slug}`,
+            '@id': article.url,
         },
     };
 }

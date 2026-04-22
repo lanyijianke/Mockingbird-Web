@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getArticleListPath } from '@/lib/articles/article-route-paths';
 import { buildWebSiteJsonLd, JsonLdScript } from '@/lib/utils/json-ld';
 import './globals.css';
 
@@ -66,7 +67,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           <div className="nav-right">
-            <Link href="/articles" className="nav-link">文章</Link>
+            <Link href="/" className="nav-link">首页</Link>
+            <Link href={getArticleListPath('ai')} className="nav-link">AI文章</Link>
+            <Link href={getArticleListPath('finance')} className="nav-link">金融文章</Link>
             <Link href="/prompts" className="nav-link">提示词</Link>
 
             {/* ═══ 热榜 — 父子菜单 ═══ */}

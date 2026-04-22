@@ -97,31 +97,37 @@ export default function PromptDetailClient({
                             </span>
                         </div>
                     ) : images.length > 0 ? (
-                        <div className="pd-showcase pd-gallery glass">
-                            <div className="pd-main-img">
-                                <Image
-                                    src={activeImage}
-                                    alt={title}
-                                    fill
-                                    sizes="(max-width: 768px) 100vw, 560px"
-                                    style={{ objectFit: 'contain' }}
-                                    priority
-                                />
-                            </div>
-                            {images.length > 1 && (
-                                <div className="pd-thumbs">
-                                    {images.map((img, i) => (
-                                        <div
-                                            key={i}
-                                            className={`pd-thumb ${activeImage === img ? 'active' : ''}`}
-                                            onClick={() => setActiveImage(img)}
-                                        >
-                                            <Image src={img} alt={`预览 ${i + 1}`} fill sizes="48px" style={{ objectFit: 'cover' }} />
-                                        </div>
-                                    ))}
+                        <>
+                            <div className="pd-showcase pd-gallery glass">
+                                <span className="pd-image-badge">
+                                    <i className="bi bi-image-fill" /> 仅封面图
+                                </span>
+                                <div className="pd-main-img">
+                                    <Image
+                                        src={activeImage}
+                                        alt={title}
+                                        fill
+                                        sizes="(max-width: 768px) 100vw, 560px"
+                                        style={{ objectFit: 'contain' }}
+                                        priority
+                                    />
                                 </div>
-                            )}
-                        </div>
+                                {images.length > 1 && (
+                                    <div className="pd-thumbs">
+                                        {images.map((img, i) => (
+                                            <div
+                                                key={i}
+                                                className={`pd-thumb ${activeImage === img ? 'active' : ''}`}
+                                                onClick={() => setActiveImage(img)}
+                                            >
+                                                <Image src={img} alt={`预览 ${i + 1}`} fill sizes="48px" style={{ objectFit: 'cover' }} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <p className="pd-media-note">源数据暂未提供可播放视频，当前仅展示封面图</p>
+                        </>
                     ) : (
                         <div className="pd-showcase pd-empty glass">
                             <i className="bi bi-image" />
@@ -168,7 +174,7 @@ export default function PromptDetailClient({
                                 <span className="dot yellow" />
                                 <span className="dot green" />
                             </div>
-                            <span className="pd-term-label">提示词 // 指令</span>
+                            <span className="pd-term-label">提示词</span>
                             <button
                                 className={`pd-copy-btn ${copied ? 'copied' : ''}`}
                                 onClick={handleCopy}

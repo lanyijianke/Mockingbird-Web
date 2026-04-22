@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getTopArticles, getTotalCount as getArticleCount } from '@/lib/services/article-service';
+import { getArticleCategories, getTopArticles, getTotalCount as getArticleCount } from '@/lib/services/article-service';
+import { getArticleDetailPath, getArticleListPath } from '@/lib/articles/article-route-paths';
 import { getTopPrompts } from '@/lib/services/prompt-service';
 import { getCategoryName } from '@/lib/categories';
 import { queryScalar } from '@/lib/db';
@@ -16,13 +17,15 @@ export default async function HomePage() {
   let prompts: Awaited<ReturnType<typeof getTopPrompts>> = [];
   let articleCount = 0;
   let promptCount = 0;
+  let articleCategories: Awaited<ReturnType<typeof getArticleCategories>> = [];
 
   try {
-    [articles, prompts, articleCount, promptCount] = await Promise.all([
-      getTopArticles(15),
+    [articles, prompts, articleCount, promptCount, articleCategories] = await Promise.all([
+      getTopArticles(15, { site: 'ai' }),
       getTopPrompts(8),
-      getArticleCount(),
+      getArticleCount({ site: 'ai' }),
       (queryScalar<number>('SELECT COUNT(*) FROM Prompts WHERE IsActive = 1')).then(v => v ?? 0),
+      getArticleCategories('ai'),
     ]);
   } catch (err) {
     console.error('[HomePage] 数据加载失败，使用空数据降级渲染:', err);
@@ -69,7 +72,7 @@ export default async function HomePage() {
         {/* Left Column: Side articles */}
         <div className="editorial-left">
           {leftArticles.map(article => (
-            <Link key={article.id} href={`/articles/${article.slug}`} className="side-card">
+            <Link key={article.id} href={getArticleDetailPath('ai', article.slug)} className="side-card">
               {article.coverUrl && (
                 <div className="side-card-cover">
                   <Image src={article.coverUrl || '/images/default-cover.png'} alt={article.title} fill sizes="(max-width: 768px) 100vw, 280px" style={{ objectFit: 'cover' }} />
@@ -77,7 +80,7 @@ export default async function HomePage() {
               )}
               <div className="side-card-info">
                 <span className="side-card-meta">
-                  {formatBeijingDate(article.createdAt)} IN <span className="meta-category">{getCategoryName(article.category)}</span>
+                  {formatBeijingDate(article.createdAt)} IN <span className="meta-category">{article.categoryName}</span>
                 </span>
                 <h3 className="side-card-title">{article.title}</h3>
               </div>
@@ -88,7 +91,7 @@ export default async function HomePage() {
         {/* Center Column: Hero article */}
         <div className="editorial-center">
           {heroArticle && (
-            <Link href={`/articles/${heroArticle.slug}`} className="hero-card">
+            <Link href={getArticleDetailPath('ai', heroArticle.slug)} className="hero-card">
               {heroArticle.coverUrl && (
                 <div className="hero-card-cover">
                   <Image src={heroArticle.coverUrl || '/images/default-cover.png'} alt={heroArticle.title} fill sizes="(max-width: 768px) 100vw, 560px" style={{ objectFit: 'cover' }} />
@@ -96,7 +99,7 @@ export default async function HomePage() {
               )}
               <div className="hero-card-info">
                 <span className="hero-card-meta">
-                  {formatBeijingDate(heroArticle.createdAt)} IN <span className="meta-category">{getCategoryName(heroArticle.category)}</span>
+                  {formatBeijingDate(heroArticle.createdAt)} IN <span className="meta-category">{heroArticle.categoryName}</span>
                 </span>
                 <h2 className="hero-card-title">{heroArticle.title}</h2>
                 {heroArticle.summary && (
@@ -111,17 +114,17 @@ export default async function HomePage() {
         <aside className="editorial-right">
           <div className="recent-header">
             <span>最新文章</span>
-            <Link href="/articles" className="recent-arrow">→</Link>
+            <Link href={getArticleListPath('ai')} className="recent-arrow">→</Link>
           </div>
           <div className="recent-list">
             {recentArticles.map(article => (
-              <Link key={article.id} href={`/articles/${article.slug}`} className="recent-item">
+              <Link key={article.id} href={getArticleDetailPath('ai', article.slug)} className="recent-item">
                 <div className="recent-thumb">
                   <Image src={article.coverUrl || '/images/default-cover.png'} alt={article.title} fill sizes="56px" style={{ objectFit: 'cover' }} />
                 </div>
                 <div className="recent-info">
                   <h4 className="recent-title">{article.title}</h4>
-                  <span className="recent-category">{getCategoryName(article.category)}</span>
+                  <span className="recent-category">{article.categoryName}</span>
                 </div>
               </Link>
             ))}
@@ -133,24 +136,25 @@ export default async function HomePage() {
       <section className="home-section">
         <div className="section-bar">
           <h2 className="section-title">分类文章精选</h2>
-          <Link href="/articles" className="section-more">
+          <Link href={getArticleListPath('ai')} className="section-more">
             浏览全部 →
           </Link>
         </div>
 
         <div className="category-showcase">
-          {(['industry-news', 'tech-practice', 'tech-basics'] as const).map(catCode => {
+          {articleCategories.slice(0, 3).map((category) => {
+            const catCode = category.code;
             const catArticles = categoryGroups.get(catCode) || [];
             return (
               <div key={catCode} className="category-group">
                 <div className="category-group-header">
-                  <span className="category-group-name">{getCategoryName(catCode)}</span>
+                  <span className="category-group-name">{category.name}</span>
                   <span className="category-group-count">{catArticles.length} 篇</span>
                 </div>
                 {catArticles.length > 0 ? (
                   <div className="category-group-list">
                     {catArticles.slice(0, 3).map(article => (
-                      <Link key={article.id} href={`/articles/${article.slug}`} className="category-article-card">
+                      <Link key={article.id} href={getArticleDetailPath('ai', article.slug)} className="category-article-card">
                         <div className="category-article-cover">
                           <Image
                             src={article.coverUrl || '/images/default-cover.png'}

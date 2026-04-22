@@ -7,17 +7,18 @@ export const runtime = 'nodejs';
 // GET /api/articles?page=1&pageSize=12&category=vibe-coding&q=search
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
+    const site = searchParams.get('site') || 'ai';
 
     // 路由: /api/articles/slugs → 返回所有 Slug (SSG 用)
     if (searchParams.get('action') === 'slugs') {
-        const slugs = await getAllSlugs();
+        const slugs = await getAllSlugs(site);
         return NextResponse.json({ success: true, data: slugs });
     }
 
     // 路由: /api/articles/top?count=9
     if (searchParams.get('action') === 'top') {
         const count = parseCountParam(searchParams, 9);
-        const articles = await getTopArticles(count);
+        const articles = await getTopArticles(count, { site });
         return NextResponse.json({ success: true, data: articles });
     }
 
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     const category = parseCategoryParam(searchParams);
     const q = parseSearchQuery(searchParams);
 
-    const result = await getPagedArticles(page, pageSize, category, q);
+    const result = await getPagedArticles(page, pageSize, category, q, { site });
     return NextResponse.json({ success: true, data: result });
 }
 
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'track-view' && slug && typeof slug === 'string') {
         const success = await trackView(slug);
-        return NextResponse.json({ success });
+        return NextResponse.json({ success: true, tracked: success });
     }
 
     return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });

@@ -35,14 +35,45 @@ npm run build
 |---|---|---|
 | `SITE_URL` | 站点绝对地址，用于 canonical / robots / sitemap / JSON-LD | `https://aigcclub.com.cn` |
 | `SQLITE_DB_PATH` | 本地 SQLite 数据库路径 | `./data/knowledge.db` |
-| `CONTENT_ARTICLES_DIR` | 文章 Markdown 目录 | `./public/content/articles` |
-| `CONSOLE_API_BASE_URL` | Console API 根地址 | `http://localhost:5299` |
+| `ARTICLE_LOCAL_SOURCES` | 本地文章源配置(JSON 数组)，运行时读取 manifest 与 Markdown | 空 |
+| `PROMPT_CSV_DIR` | 本地提示词 CSV 根目录，运行时读取 `inbox/` 并归档到 `processed/` / `failed/` | `./raw-incoming/prompts` |
 | `KNOWLEDGE_ADMIN_TOKEN` | 管理接口鉴权 token（优先） | 空 |
 | `ADMIN_API_TOKEN` | 管理接口鉴权 token（兼容回退） | 空 |
 | `ROBOTS_BLOCK_BAIDU` | 是否屏蔽 Baidu 爬虫（`true/false`） | `false` |
 | `MEDIA_DOWNLOAD_MAX_BYTES` | 媒体下载最大字节数（SSRF/资源防护） | `52428800` |
 | `JOB_PROMPT_SYNC_CRON` | 提示词同步 cron | `30 */1 * * * *` |
 | `JOB_RANKING_SYNC_CRON` | 排行榜同步 cron | `0 */2 * * *` |
+
+`ARTICLE_LOCAL_SOURCES` 示例：
+
+```json
+[
+  {
+    "site": "ai",
+    "source": "web-article",
+    "rootPath": "/data/content/web-article",
+    "manifestPath": "manifest.json"
+  },
+  {
+    "site": "finance",
+    "source": "finance-digest",
+    "rootPath": "/data/content/finance-digest",
+    "manifestPath": "manifest.json"
+  }
+]
+```
+
+每个本地内容仓库需提供：
+
+- 根目录 `manifest.json`
+- `articles/<slug>/index.md`
+- `articles/<slug>/images/*`
+
+`PROMPT_CSV_DIR` 目录约定：
+
+- `inbox/`：待导入 CSV
+- `processed/`：成功处理后的归档
+- `failed/`：处理失败后的归档
 
 ## 4. 管理接口安全约束
 
@@ -110,4 +141,4 @@ curl -i -X POST "http://localhost:5046/api/jobs?action=start" -H "x-admin-token:
 1. 收录量：Indexed Pages 周环比。
 2. 抓取健康：5xx/4xx、robots 屏蔽误伤、sitemap 报错。
 3. 搜索表现：Top Queries、CTR、平均排名变化。
-4. 重点页面：`/articles/*`、`/prompts/*`、`/rankings/*` 抽样监控。
+4. 重点页面：`/ai/articles/*`、`/finance/articles/*`、`/prompts/*`、`/rankings/*` 抽样监控。

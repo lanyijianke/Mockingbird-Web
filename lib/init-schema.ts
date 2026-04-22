@@ -6,21 +6,7 @@ import Database from 'better-sqlite3';
 
 export function initDatabase(db: Database.Database): void {
     db.exec(`
-        CREATE TABLE IF NOT EXISTS Articles (
-            Id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            Title           TEXT    NOT NULL DEFAULT '',
-            Slug            TEXT    NOT NULL DEFAULT '' UNIQUE,
-            Summary         TEXT    DEFAULT '',
-            Category        TEXT    DEFAULT 'industry-news',
-            Status          INTEGER DEFAULT 1,
-            CoverUrl        TEXT    DEFAULT NULL,
-            SeoTitle        TEXT    DEFAULT NULL,
-            SeoDescription  TEXT    DEFAULT NULL,
-            SeoKeywords     TEXT    DEFAULT NULL,
-            CreatedAt       TEXT    DEFAULT (datetime('now')),
-            UpdatedAt       TEXT    DEFAULT NULL,
-            ViewCount       INTEGER DEFAULT 0
-        );
+        DROP TABLE IF EXISTS Articles;
 
         CREATE TABLE IF NOT EXISTS Prompts (
             Id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,9 +27,6 @@ export function initDatabase(db: Database.Database): void {
             UpdatedAt       TEXT    DEFAULT NULL
         );
 
-        CREATE INDEX IF NOT EXISTS idx_articles_slug     ON Articles(Slug);
-        CREATE INDEX IF NOT EXISTS idx_articles_created   ON Articles(CreatedAt);
-        CREATE INDEX IF NOT EXISTS idx_articles_category  ON Articles(Category);
         CREATE INDEX IF NOT EXISTS idx_prompts_created    ON Prompts(CreatedAt);
         CREATE INDEX IF NOT EXISTS idx_prompts_category   ON Prompts(Category);
         CREATE INDEX IF NOT EXISTS idx_prompts_active     ON Prompts(IsActive);

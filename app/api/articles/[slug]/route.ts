@@ -9,7 +9,8 @@ export async function GET(
     { params }: { params: Promise<{ slug: string }> }
 ) {
     const { slug } = await params;
-    const article = await getArticleBySlug(slug);
+    const site = new URL(request.url).searchParams.get('site') || 'ai';
+    const article = await getArticleBySlug(slug, { site });
 
     if (!article) {
         return NextResponse.json(

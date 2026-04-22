@@ -2,21 +2,22 @@ import fs from 'fs/promises';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
 import { queryOne, execute } from '@/lib/db';
-import { fetchFromConsole, postToConsole } from '@/lib/utils/console-client';
 import { logger } from '@/lib/utils/logger';
 import {
-    resolvePath, ensureDir, safeDelete,
+    resolvePath, ensureDir,
     type PipelineReport, createEmptyReport,
-} from './pipeline-base';
+} from './pipeline-shared';
 import { downloadMedia, downloadVideoViaYtDlp, getMediaDir } from './media-pipeline';
 import { extractFirstFrame } from '@/lib/utils/media-processor';
 
 // ════════════════════════════════════════════════════════════════
 // CSV 提示词批量入库管线
-// 对应 PromptCsvIngestionPipeline.cs
+// 从本地投递目录读取 CSV，自给自足完成提示词入库
 // 支持 SourceMedia / SourceVideos / cover_image_url / video_preview_url
 // 下载外部资源后自动压缩（视频 720p / 图片 WebP）
 // ════════════════════════════════════════════════════════════════
+
+const DEFAULT_PROMPT_CSV_DIR = './raw-incoming/prompts';
 
 interface CsvPromptRow {
     title?: string;
@@ -35,64 +36,95 @@ interface CsvPromptRow {
     'Source Link'?: string;
 }
 
-interface ApprovedCsvFile {
-    id: string;
-    fileName: string;
-    content: string;
+interface PromptCsvDirectories {
+    rootDir: string;
+    inboxDir: string;
+    processedDir: string;
+    failedDir: string;
 }
 
-interface ApprovedCsvResponse {
-    count: number;
-    files: ApprovedCsvFile[];
+function getPromptCsvDirectories(): PromptCsvDirectories {
+    const rootDir = resolvePath(process.env.PROMPT_CSV_DIR, DEFAULT_PROMPT_CSV_DIR);
+    return {
+        rootDir,
+        inboxDir: path.join(rootDir, 'inbox'),
+        processedDir: path.join(rootDir, 'processed'),
+        failedDir: path.join(rootDir, 'failed'),
+    };
+}
+
+async function listInboxCsvFiles(inboxDir: string): Promise<string[]> {
+    const entries = await fs.readdir(inboxDir, { withFileTypes: true });
+    return entries
+        .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.csv'))
+        .map((entry) => entry.name)
+        .sort((left, right) => left.localeCompare(right));
+}
+
+async function pathExists(filePath: string): Promise<boolean> {
+    try {
+        await fs.access(filePath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function archiveCsvFile(sourcePath: string, targetDir: string): Promise<string> {
+    const parsed = path.parse(sourcePath);
+    let targetPath = path.join(targetDir, parsed.base);
+
+    if (await pathExists(targetPath)) {
+        targetPath = path.join(targetDir, `${parsed.name}-${Date.now()}${parsed.ext}`);
+    }
+
+    await fs.rename(sourcePath, targetPath);
+    return targetPath;
+}
+
+function mergeReport(target: PipelineReport, current: PipelineReport): void {
+    target.totalParsed += current.totalParsed;
+    target.newlyAdded += current.newlyAdded;
+    target.updated += current.updated;
+    target.skipped += current.skipped;
 }
 
 export async function ingestFromCsvAsync(): Promise<PipelineReport> {
     const report = createEmptyReport();
+    const directories = getPromptCsvDirectories();
 
-    // 从 Console API 拉取已审核通过的 CSV 文件（对标 articles 的 pullFromConsole 模式）
-    const data = await fetchFromConsole<ApprovedCsvResponse>(
-        '/api/data/prompts/approved?limit=10'
-    );
+    await Promise.all([
+        ensureDir(directories.inboxDir),
+        ensureDir(directories.processedDir),
+        ensureDir(directories.failedDir),
+    ]);
 
-    if (!data || !data.files || data.files.length === 0) {
+    const fileNames = await listInboxCsvFiles(directories.inboxDir);
+    if (fileNames.length === 0) {
         return report;
     }
 
-    logger.info('CsvIngestion', `从 Console 拉取到 ${data.files.length} 个 CSV 文件`);
+    logger.info('CsvIngestion', `从本地目录读取到 ${fileNames.length} 个 CSV 文件`);
 
-    const successIds: string[] = [];
+    for (const fileName of fileNames) {
+        const sourcePath = path.join(directories.inboxDir, fileName);
 
-    for (const csvFile of data.files) {
         try {
-            // 将 CSV 内容写到临时文件，复用现有处理逻辑
-            const tmpDir = resolvePath(undefined, './transmuter-workshop/tmp');
-            await ensureDir(tmpDir);
-            const tmpPath = `${tmpDir}/${csvFile.fileName}`;
-            await fs.writeFile(tmpPath, csvFile.content, 'utf-8');
-
-            const fileReport = await processSingleCsvAsync(tmpPath);
-            report.totalParsed += fileReport.totalParsed;
-            report.newlyAdded += fileReport.newlyAdded;
-            report.updated += fileReport.updated;
-            report.skipped += fileReport.skipped;
-
-            // 处理完毕后删除临时文件
-            await safeDelete(tmpPath);
-            successIds.push(csvFile.id);
-            logger.info('CsvIngestion', `已处理: ${csvFile.fileName}`);
+            const fileReport = await processSingleCsvAsync(sourcePath);
+            mergeReport(report, fileReport);
+            await archiveCsvFile(sourcePath, directories.processedDir);
+            logger.info('CsvIngestion', `已处理: ${fileName}`);
         } catch (err) {
-            logger.error('CsvIngestion', `处理 CSV 失败: ${csvFile.fileName}`, err);
-        }
-    }
+            logger.error('CsvIngestion', `处理 CSV 失败: ${fileName}`, err);
 
-    // 回调 Console 标记已导出（物理删除 approved/ 下的 CSV 文件）
-    if (successIds.length > 0) {
-        await postToConsole('/api/data/prompts/mark-exported', { ids: successIds });
+            if (await pathExists(sourcePath)) {
+                await archiveCsvFile(sourcePath, directories.failedDir);
+            }
+        }
     }
 
     return report;
 }
-
 
 async function processSingleCsvAsync(csvPath: string): Promise<PipelineReport> {
     const report = createEmptyReport();

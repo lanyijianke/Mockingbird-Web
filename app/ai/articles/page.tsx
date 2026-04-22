@@ -1,24 +1,23 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { getPagedArticles } from '@/lib/services/article-service';
-import { getSubcategories, getCategoryName } from '@/lib/categories';
+import { getArticleCategories, getPagedArticles } from '@/lib/services/article-service';
+import { getArticleDetailPath, getArticleListPath } from '@/lib/articles/article-route-paths';
 import { buildBreadcrumbJsonLd, buildCollectionPageJsonLd, JsonLdScript } from '@/lib/utils/json-ld';
 
-export const dynamic = 'force-dynamic'; // SSR for search/filter support
+export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const SITE_URL = process.env.SITE_URL || 'https://aigcclub.com.cn';
-const ARTICLE_CATEGORY_CODES = new Set(getSubcategories('articles').map((item) => item.code));
 
 function normalizePage(rawPage?: string): number {
     const parsed = Number.parseInt(rawPage || '1', 10);
     return Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
 }
 
-function normalizeCategory(rawCategory?: string): string | undefined {
+function normalizeCategory(rawCategory: string | undefined, categoryCodes: Set<string>): string | undefined {
     if (!rawCategory) return undefined;
-    return ARTICLE_CATEGORY_CODES.has(rawCategory) ? rawCategory : undefined;
+    return categoryCodes.has(rawCategory) ? rawCategory : undefined;
 }
 
 function normalizeSearchQuery(rawQuery?: string): string | undefined {
@@ -31,7 +30,8 @@ function buildArticlesCanonicalPath(page: number, category?: string): string {
     const parts: string[] = [];
     if (category) parts.push(`category=${encodeURIComponent(category)}`);
     if (page > 1) parts.push(`page=${page}`);
-    return parts.length > 0 ? `/articles?${parts.join('&')}` : '/articles';
+    const listPath = getArticleListPath('ai');
+    return parts.length > 0 ? `${listPath}?${parts.join('&')}` : listPath;
 }
 
 export async function generateMetadata({
@@ -41,12 +41,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     const params = await searchParams;
     const page = normalizePage(params.page);
-    const category = normalizeCategory(params.category);
+    const categories = await getArticleCategories('ai');
+    const categoryCodes = new Set(categories.map((item) => item.code));
+    const category = normalizeCategory(params.category, categoryCodes);
     const q = normalizeSearchQuery(params.q);
     const canonicalPath = buildArticlesCanonicalPath(page, category);
 
-    let title = '所有文章';
-    if (category) title = `${getCategoryName(category)} 文章`;
+    let title = 'AI 文章';
+    if (category) title = `${categories.find((item) => item.code === category)?.name || category} 文章`;
     if (q) title = `搜索「${q}」`;
 
     return {
@@ -70,53 +72,49 @@ export async function generateMetadata({
     };
 }
 
-export default async function ArticlesPage({
+export default async function AiArticlesPage({
     searchParams,
 }: {
     searchParams: Promise<{ page?: string; category?: string; q?: string }>;
 }) {
     const params = await searchParams;
     const page = normalizePage(params.page);
-    const category = normalizeCategory(params.category);
+    const articleCategories = await getArticleCategories('ai');
+    const categoryCodes = new Set(articleCategories.map((item) => item.code));
+    const category = normalizeCategory(params.category, categoryCodes);
     const q = normalizeSearchQuery(params.q);
 
-    const result = await getPagedArticles(page, 10, category, q);
+    const result = await getPagedArticles(page, 10, category, q, { site: 'ai' });
 
-    // 文章子类（articles 分组下的子分类）
-    const articleCategories = getSubcategories('articles');
-
-    // 构建带保留参数的分页 URL
     function buildPageUrl(p: number) {
         const parts: string[] = [];
         if (p > 1) parts.push(`page=${p}`);
         if (category) parts.push(`category=${encodeURIComponent(category)}`);
         if (q) parts.push(`q=${encodeURIComponent(q)}`);
-        return parts.length ? `/articles?${parts.join('&')}` : '/articles';
+        const listPath = getArticleListPath('ai');
+        return parts.length ? `${listPath}?${parts.join('&')}` : listPath;
     }
 
     return (
         <div className="articles-page">
-            {/* SEO: BreadcrumbList + CollectionPage JSON-LD */}
             <JsonLdScript data={[
                 buildBreadcrumbJsonLd([
                     { name: '首页', url: SITE_URL },
-                    { name: '所有文章', url: `${SITE_URL}/articles` },
+                    { name: 'AI 文章', url: `${SITE_URL}${getArticleListPath('ai')}` },
                 ]),
-                buildCollectionPageJsonLd('文章库', '浏览知更鸟知识库的全部 AI 文章', `${SITE_URL}/articles`),
+                buildCollectionPageJsonLd('AI 文章库', '浏览知更鸟知识库的全部 AI 文章', `${SITE_URL}${getArticleListPath('ai')}`),
             ]} />
 
-            {/* 面包屑导航 */}
             <nav className="breadcrumb">
                 <Link href="/" className="crumb-link">
                     <i className="bi bi-house-door" /> 首页
                 </Link>
                 <span className="crumb-separator">/</span>
-                <span className="crumb-current">所有文章</span>
+                <span className="crumb-current">AI 文章</span>
             </nav>
 
-            {/* 居中搜索栏 */}
             <div className="search-container">
-                <form method="get" action="/articles" className="search-box glass">
+                <form method="get" action={getArticleListPath('ai')} className="search-box glass">
                     <i className="bi bi-search search-icon" />
                     <input
                         type="text"
@@ -132,11 +130,10 @@ export default async function ArticlesPage({
                 </form>
             </div>
 
-            {/* 水平过滤条 */}
             <div className="filter-bar-container">
                 <div className="filter-bar-scroll">
                     <Link
-                        href="/articles"
+                        href={getArticleListPath('ai')}
                         className={`filter-item ${!category ? 'active' : ''}`}
                     >
                         全部
@@ -144,7 +141,7 @@ export default async function ArticlesPage({
                     {articleCategories.map((cat) => (
                         <Link
                             key={cat.code}
-                            href={`/articles?category=${cat.code}`}
+                            href={`${getArticleListPath('ai')}?category=${cat.code}`}
                             className={`filter-item ${category === cat.code ? 'active' : ''}`}
                         >
                             {cat.name}
@@ -153,7 +150,6 @@ export default async function ArticlesPage({
                 </div>
             </div>
 
-            {/* 水平文章卡片列表 */}
             {result.items.length > 0 ? (
                 <div className="articles-list">
                     {result.items.map((article, i) => (
@@ -163,7 +159,7 @@ export default async function ArticlesPage({
                             style={{ animationDelay: `${(i * 0.1).toFixed(1)}s` }}
                         >
                             <Link
-                                href={`/articles/${article.slug}`}
+                                href={getArticleDetailPath('ai', article.slug)}
                                 className="article-item glass glass-card"
                             >
                                 <div className="article-cover">
@@ -177,7 +173,7 @@ export default async function ArticlesPage({
                                 </div>
                                 <div className="article-info">
                                     <div className="article-meta">
-                                        <span className="category">{getCategoryName(article.category)}</span>
+                                        <span className="category">{article.categoryName}</span>
                                         <span className="dot">·</span>
                                         <span className="date">
                                             {new Date(article.createdAt).toLocaleDateString('zh-CN', {
@@ -191,9 +187,11 @@ export default async function ArticlesPage({
                                         <span className="read-more">
                                             阅读全文 <i className="bi bi-arrow-right" />
                                         </span>
-                                        <span className="views">
-                                            <i className="bi bi-eye" /> {article.viewCount.toLocaleString()}
-                                        </span>
+                                        {typeof article.viewCount === 'number' && (
+                                            <span className="views">
+                                                <i className="bi bi-eye" /> {article.viewCount.toLocaleString()}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </Link>
@@ -207,7 +205,6 @@ export default async function ArticlesPage({
                 </div>
             )}
 
-            {/* 分页导航 */}
             {result.totalPages > 1 && (
                 <nav className="pagination-nav">
                     {page > 1 && (

@@ -4,6 +4,7 @@ import {
     getSchedulerStatus,
 } from '@/lib/jobs/scheduler';
 import { syncAllAsync as promptGitHubSync } from '@/lib/pipelines/prompt-readme-sync';
+import { ingestFromCsvAsync as promptCsvIngest } from '@/lib/pipelines/prompt-csv-ingestion';
 import { verifyAdminHeaders } from '@/lib/utils/admin-auth';
 
 export const runtime = 'nodejs';
@@ -12,7 +13,7 @@ export const runtime = 'nodejs';
  * GET /api/jobs — 获取调度器状态
  * POST /api/jobs?action=start — 启动调度器
  * POST /api/jobs?action=stop — 停止调度器
- * POST /api/jobs?action=trigger-prompt-sync — 立即执行一次 PromptReadmeSync
+ * POST /api/jobs?action=trigger-prompt-sync — 立即执行一次完整提示词同步（GitHub + 本地 CSV）
  */
 export async function GET() {
     return NextResponse.json(getSchedulerStatus());
@@ -37,10 +38,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: '调度器已停止', ...getSchedulerStatus() });
 
         case 'trigger-prompt-sync': {
-            console.log('[API] 手动触发 PromptReadmeSync...');
-            const report = await promptGitHubSync();
-            console.log('[API] PromptReadmeSync 完成:', report);
-            return NextResponse.json({ message: 'PromptReadmeSync 已执行', report });
+            console.log('[API] 手动触发提示词同步...');
+            const github = await promptGitHubSync();
+            const csv = await promptCsvIngest();
+            const report = { github, csv };
+            console.log('[API] 提示词同步完成:', report);
+            return NextResponse.json({ message: '提示词同步已执行', report });
         }
 
         default:

@@ -11,6 +11,7 @@ interface TocItem {
 }
 
 interface RelatedArticle {
+    href: string;
     slug: string;
     title: string;
     coverUrl: string | null | undefined;
@@ -27,6 +28,7 @@ interface ArticleReaderClientProps {
     readingMinutes: number;
     summary: string;
     articleUrl: string;
+    backHref: string;
     relatedArticles: RelatedArticle[];
 }
 
@@ -39,6 +41,7 @@ export default function ArticleReaderClient({
     readingMinutes,
     summary,
     articleUrl,
+    backHref,
     relatedArticles,
 }: ArticleReaderClientProps) {
     const [activeId, setActiveId] = useState<string>('');
@@ -231,7 +234,7 @@ export default function ArticleReaderClient({
                                 {shareSuccess ? '链接已复制' : '分享文章'}
                             </button>
                             <div className="back-link">
-                                <Link href="/articles">
+                                <Link href={backHref}>
                                     <i className="bi bi-arrow-left" /> 返回列表
                                 </Link>
                             </div>
@@ -248,7 +251,7 @@ export default function ArticleReaderClient({
                     </div>
                     <div className="related-grid">
                         {relatedArticles.map(article => (
-                            <Link key={article.slug} href={`/articles/${article.slug}`} className="related-card">
+                            <Link key={article.slug} href={article.href} className="related-card">
                                 <div className="related-card-cover">
                                     <Image
                                         src={article.coverUrl || '/images/default-cover.png'}

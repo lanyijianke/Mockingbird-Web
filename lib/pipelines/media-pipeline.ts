@@ -6,7 +6,7 @@ import {
     downloadVideoWithAudio,
     isVideoFile, isCompressibleImage,
 } from '@/lib/utils/media-processor';
-import { resolvePath, ensureDir } from '@/lib/pipelines/pipeline-base';
+import { resolvePath, ensureDir } from '@/lib/pipelines/pipeline-shared';
 import { logger } from '@/lib/utils/logger';
 import { validateOutboundUrl } from '@/lib/utils/url-security';
 

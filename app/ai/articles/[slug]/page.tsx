@@ -1,42 +1,42 @@
 import { notFound } from 'next/navigation';
 import { getArticleBySlug, getAllSlugs, getRelatedArticles } from '@/lib/services/article-service';
-import { getCategoryName } from '@/lib/categories';
+import { getArticleDetailPath, getArticleListPath } from '@/lib/articles/article-route-paths';
 import type { Metadata } from 'next';
 import { buildArticleJsonLd, buildBreadcrumbJsonLd, JsonLdScript } from '@/lib/utils/json-ld';
-import ArticleReaderClient from './ArticleReaderClient';
-import './article-reader.css';
+import ArticleReaderClient from '@/app/articles/[slug]/ArticleReaderClient';
+import '@/app/articles/[slug]/article-reader.css';
 
 const SITE_URL = process.env.SITE_URL || 'https://aigcclub.com.cn';
 
 export const runtime = 'nodejs';
-export const revalidate = 3600; // ISR: 1小时
+export const revalidate = 3600;
 
-// SSG: 预生成已有文章页
 export async function generateStaticParams() {
-    const slugs = await getAllSlugs();
+    const slugs = await getAllSlugs('ai');
     return slugs.map((slug) => ({ slug }));
 }
 
-// 动态元标签
 export async function generateMetadata({
     params,
 }: {
     params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
     const { slug } = await params;
-    const article = await getArticleBySlug(slug);
+    const article = await getArticleBySlug(slug, { site: 'ai' });
     if (!article) return { title: '文章未找到' };
+
+    const canonicalPath = getArticleDetailPath('ai', slug);
 
     return {
         title: article.seoTitle || article.title,
         description: article.seoDescription || article.summary,
         keywords: article.seoKeywords || undefined,
-        alternates: { canonical: `/articles/${slug}` },
+        alternates: { canonical: canonicalPath },
         openGraph: {
             title: article.title,
             description: article.summary || undefined,
             type: 'article',
-            url: `${SITE_URL}/articles/${slug}`,
+            url: `${SITE_URL}${canonicalPath}`,
             images: article.coverUrl ? [article.coverUrl] : undefined,
             publishedTime: article.createdAt,
             modifiedTime: article.updatedAt || undefined,
@@ -50,7 +50,6 @@ export async function generateMetadata({
     };
 }
 
-// ════════ TOC 提取 ════════
 interface TocItem {
     id: string;
     text: string;
@@ -64,12 +63,11 @@ function extractToc(markdown: string): TocItem[] {
     while ((match = headingRegex.exec(markdown)) !== null) {
         const level = match[1].length;
         const text = match[2]
-            .replace(/\*\*(.+?)\*\*/g, '$1') // bold
-            .replace(/\*(.+?)\*/g, '$1') // italic
-            .replace(/`(.+?)`/g, '$1') // inline code
-            .replace(/\[(.+?)\]\(.+?\)/g, '$1') // links
+            .replace(/\*\*(.+?)\*\*/g, '$1')
+            .replace(/\*(.+?)\*/g, '$1')
+            .replace(/`(.+?)`/g, '$1')
+            .replace(/\[(.+?)\]\(.+?\)/g, '$1')
             .trim();
-        // Build slug (same as rehype-slug)
         const id = text
             .toLowerCase()
             .replace(/[^\p{L}\p{N}\s-]/gu, '')
@@ -83,33 +81,29 @@ function extractToc(markdown: string): TocItem[] {
     return toc;
 }
 
-// ════════ 阅读时间估算 ════════
 function estimateReadingMinutes(content: string): number {
-    // 去除代码块、URL、Markdown 标记，只保留可读文字
     const plain = content
-        .replace(/```[\s\S]*?```/g, '') // 代码块
-        .replace(/`[^`]+`/g, '') // 行内代码
-        .replace(/https?:\/\/\S+/g, '') // URL
-        .replace(/[#*\[\]()\>|_~`\-!]/g, '') // Markdown 符号
-        .replace(/\s+/g, ''); // 空白
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/`[^`]+`/g, '')
+        .replace(/https?:\/\/\S+/g, '')
+        .replace(/[#*\[\]()\>|_~`\-!]/g, '')
+        .replace(/\s+/g, '');
     return Math.max(1, Math.ceil(plain.length / 600));
 }
 
-export default async function ArticleDetailPage({
+export default async function AiArticleDetailPage({
     params,
 }: {
     params: Promise<{ slug: string }>;
 }) {
     const { slug } = await params;
-    const article = await getArticleBySlug(slug);
+    const article = await getArticleBySlug(slug, { site: 'ai' });
     if (!article) notFound();
 
     const content = article.content || '';
     const toc = extractToc(content);
     const readingMinutes = estimateReadingMinutes(content);
-
-    // 获取同分类推荐文章
-    const relatedArticles = await getRelatedArticles(article.category, slug, 6);
+    const relatedArticles = await getRelatedArticles(article.category, slug, 6, { site: 'ai' });
 
     const dateStr = new Date(article.createdAt).toLocaleDateString('zh-CN', {
         timeZone: 'Asia/Shanghai',
@@ -118,7 +112,6 @@ export default async function ArticleDetailPage({
         day: 'numeric',
     });
 
-    // 服务端渲染 Markdown → HTML (使用动态 import 避免 SSR 问题)
     const { unified } = await import('unified');
     const remarkParse = (await import('remark-parse')).default;
     const remarkGfm = (await import('remark-gfm')).default;
@@ -136,26 +129,16 @@ export default async function ArticleDetailPage({
         .use(rehypeStringify)
         .process(content);
 
-    let renderedHtml = String(result);
-
-    // 修复相对路径图片引用
-    renderedHtml = renderedHtml
-        .replace(/src="\.\/assets\//g, `src="/content/articles/${slug}/assets/`)
-        .replace(/src="assets\//g, `src="/content/articles/${slug}/assets/`)
-        .replace(/src="\.\/images\//g, `src="/content/articles/${slug}/images/`)
-        .replace(/src="images\//g, `src="/content/articles/${slug}/images/`)
-        .replace(/<img /g, '<img loading="lazy" ');
-
-    const articleUrl = `https://aigcclub.com.cn/articles/${slug}`;
+    const renderedHtml = String(result).replace(/<img /g, '<img loading="lazy" ');
+    const articleUrl = `${SITE_URL}${getArticleDetailPath('ai', slug)}`;
 
     return (
         <>
-            {/* SEO: Article + BreadcrumbList JSON-LD */}
             <JsonLdScript data={[
                 buildArticleJsonLd({
                     title: article.title,
                     summary: article.summary,
-                    slug,
+                    url: articleUrl,
                     coverUrl: article.coverUrl,
                     createdAt: article.createdAt,
                     updatedAt: article.updatedAt,
@@ -163,7 +146,7 @@ export default async function ArticleDetailPage({
                 }),
                 buildBreadcrumbJsonLd([
                     { name: '首页', url: SITE_URL },
-                    { name: '文章', url: `${SITE_URL}/articles` },
+                    { name: 'AI 文章', url: `${SITE_URL}${getArticleListPath('ai')}` },
                     { name: article.title, url: articleUrl },
                 ]),
             ]} />
@@ -172,17 +155,19 @@ export default async function ArticleDetailPage({
                 renderedHtml={renderedHtml}
                 toc={toc}
                 title={article.title}
-                categoryName={getCategoryName(article.category)}
+                categoryName={article.categoryName}
                 dateStr={dateStr}
                 readingMinutes={readingMinutes}
                 summary={article.summary ?? ''}
                 articleUrl={articleUrl}
-                relatedArticles={relatedArticles.map(a => ({
-                    slug: a.slug,
-                    title: a.title,
-                    coverUrl: a.coverUrl,
-                    category: getCategoryName(a.category),
-                    summary: a.summary,
+                backHref={getArticleListPath('ai')}
+                relatedArticles={relatedArticles.map((item) => ({
+                    href: getArticleDetailPath('ai', item.slug),
+                    slug: item.slug,
+                    title: item.title,
+                    coverUrl: item.coverUrl,
+                    category: item.categoryName,
+                    summary: item.summary,
                 }))}
             />
         </>

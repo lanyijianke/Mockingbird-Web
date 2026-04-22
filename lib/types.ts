@@ -2,21 +2,9 @@
 // TypeScript 类型定义 — 精确对应 C# DTOs
 // ════════════════════════════════════════════════════════════════
 
-// ── 数据库行类型 (对应 SQLite 表结构) ─────────────────────────
-export interface ArticleRow {
-    Id: number;
-    Title: string;
-    Slug: string;
-    Summary: string | null;
-    Category: string | null;
-    Status: number;
-    CoverUrl: string | null;
-    SeoTitle: string | null;
-    SeoDescription: string | null;
-    SeoKeywords: string | null;
-    CreatedAt: string | null;
-    UpdatedAt: string | null;
-    ViewCount: number;
+export interface ArticleCategory {
+    code: string;
+    name: string;
 }
 
 export interface PromptRow {
@@ -47,22 +35,28 @@ export enum ArticleStatus {
 
 // ── 文章列表项 (对应 ArticleListItemDto.cs) ───────────────────
 export interface ArticleListItem {
-    id: number;
+    id: string;
+    site: string;
     title: string;
     slug: string;
     summary: string;
     category: string;  // 分类编码 (如 'vibe-coding')
+    categoryName: string;
     status: ArticleStatus;
     coverUrl?: string | null;
     createdAt: string; // ISO 8601
-    viewCount: number;
+    updatedAt?: string | null;
+    viewCount?: number | null;
 }
 
 // ── 文章详情 (对应 ArticleDetailDto.cs) ───────────────────────
 export interface ArticleDetail extends ArticleListItem {
     content: string;
     renderedHtml?: string | null;
-    updatedAt?: string | null;
+    author?: string | null;
+    originalUrl?: string | null;
+    sourcePlatform?: string | null;
+    type?: string | null;
     // SEO 优化字段
     seoTitle?: string | null;
     seoDescription?: string | null;
