@@ -7,7 +7,7 @@ import {
     type PipelineReport, createEmptyReport,
 } from './pipeline-shared';
 import { downloadMedia, downloadVideoViaYtDlp, getMediaDir } from './media-pipeline';
-import { extractFirstFrame } from '@/lib/utils/media-processor';
+import { createCardPreviewVideo, extractFirstFrame } from '@/lib/utils/media-processor';
 
 // ════════════════════════════════════════════════════════════════
 // GitHub README 提示词同步管线
@@ -58,12 +58,14 @@ interface ExistingPromptRecord {
     Id: number;
     CoverImageUrl: string | null;
     VideoPreviewUrl: string | null;
+    CardPreviewVideoUrl: string | null;
     ImagesJson: string | null;
 }
 
 interface ResolvedPromptMedia {
     coverImageUrl: string | null;
     videoPreviewUrl: string | null;
+    cardPreviewVideoUrl: string | null;
     imagesJson: string | null;
 }
 
@@ -92,6 +94,7 @@ async function resolvePromptMedia(
 ): Promise<ResolvedPromptMedia> {
     let coverImageUrl = existing?.CoverImageUrl || null;
     let videoPreviewUrl = existing?.VideoPreviewUrl || null;
+    let cardPreviewVideoUrl = existing?.CardPreviewVideoUrl || null;
     let imagesJson = existing?.ImagesJson || null;
 
     if ((!coverImageUrl || !imagesJson) && prompt.images.length > 0) {
@@ -137,6 +140,14 @@ async function resolvePromptMedia(
         }
     }
 
+    if (!cardPreviewVideoUrl && videoPreviewUrl && !videoPreviewUrl.startsWith('http')) {
+        const absoluteVideoPath = path.join(mediaDir, path.basename(videoPreviewUrl));
+        const previewFileName = await createCardPreviewVideo(absoluteVideoPath);
+        if (previewFileName) {
+            cardPreviewVideoUrl = `/content/prompts/media/${previewFileName}`;
+        }
+    }
+
     if (!coverImageUrl && videoPreviewUrl && !videoPreviewUrl.startsWith('http')) {
         const absoluteVideoPath = path.join(mediaDir, path.basename(videoPreviewUrl));
         logger.info('PromptSync', `无图片封面，从视频提取首帧: ${prompt.rawTitle}`);
@@ -149,32 +160,14 @@ async function resolvePromptMedia(
     return {
         coverImageUrl,
         videoPreviewUrl,
+        cardPreviewVideoUrl,
         imagesJson,
     };
 }
 
 export async function syncAllAsync(): Promise<PipelineReport> {
-    const report = createEmptyReport();
-    const repos = loadRepoConfigs();
-
-    if (repos.length === 0) return report;
-
-    logger.info('PromptSync', `开始同步 ${repos.length} 个仓库...`);
-
-    for (const repo of repos) {
-        try {
-            const repoReport = await syncSingleRepoAsync(repo);
-            report.totalParsed += repoReport.totalParsed;
-            report.newlyAdded += repoReport.newlyAdded;
-            report.updated += repoReport.updated;
-            report.skipped += repoReport.skipped;
-        } catch (err) {
-            logger.error('PromptSync', `同步 ${repo.owner}/${repo.repo} 失败`, err);
-        }
-    }
-
-    logger.info('PromptSync', `同步完成: 解析 ${report.totalParsed}, 新增 ${report.newlyAdded}, 跳过 ${report.skipped}`);
-    return report;
+    const { syncConfiguredPromptSources } = await import('./prompt-sources/remote-sync');
+    return syncConfiguredPromptSources();
 }
 
 async function syncSingleRepoAsync(config: RepoConfig): Promise<PipelineReport> {
@@ -198,7 +191,7 @@ async function syncSingleRepoAsync(config: RepoConfig): Promise<PipelineReport> 
         try {
             // 检查是否已存在（按 sourceUrl 去重）
             const existing = await queryOne<ExistingPromptRecord>(
-                'SELECT Id, CoverImageUrl, VideoPreviewUrl, ImagesJson FROM Prompts WHERE SourceUrl = ?',
+                'SELECT Id, CoverImageUrl, VideoPreviewUrl, CardPreviewVideoUrl, ImagesJson FROM Prompts WHERE SourceUrl = ?',
                 [prompt.sourceUrl]
             );
 
@@ -223,6 +216,10 @@ async function syncSingleRepoAsync(config: RepoConfig): Promise<PipelineReport> 
                     updates.push('VideoPreviewUrl = ?');
                     updateArgs.push(media.videoPreviewUrl);
                 }
+                if (!existing.CardPreviewVideoUrl && media.cardPreviewVideoUrl) {
+                    updates.push('CardPreviewVideoUrl = ?');
+                    updateArgs.push(media.cardPreviewVideoUrl);
+                }
                 if (!existing.ImagesJson && media.imagesJson) {
                     updates.push('ImagesJson = ?');
                     updateArgs.push(media.imagesJson);
@@ -245,13 +242,14 @@ async function syncSingleRepoAsync(config: RepoConfig): Promise<PipelineReport> 
 
             // 入库（含 VideoPreviewUrl）
             await execute(
-                `INSERT INTO Prompts (Title, RawTitle, Description, Content, Category, Source, Author, SourceUrl, CoverImageUrl, VideoPreviewUrl, ImagesJson, CopyCount, IsActive, CreatedAt)
-         VALUES (?, ?, ?, ?, ?, 'github', ?, ?, ?, ?, ?, ${Math.floor(Math.random() * 9900) + 100}, 1, datetime('now'))`,
+                `INSERT INTO Prompts (Title, RawTitle, Description, Content, Category, Source, Author, SourceUrl, CoverImageUrl, VideoPreviewUrl, CardPreviewVideoUrl, ImagesJson, CopyCount, IsActive, CreatedAt)
+         VALUES (?, ?, ?, ?, ?, 'github', ?, ?, ?, ?, ?, ?, ${Math.floor(Math.random() * 9900) + 100}, 1, datetime('now'))`,
                 [
                     title, prompt.rawTitle, description, prompt.content,
                     category, prompt.author, prompt.sourceUrl,
                     media.coverImageUrl || null,
                     media.videoPreviewUrl || null,
+                    media.cardPreviewVideoUrl || null,
                     media.imagesJson || null,
                 ]
             );
