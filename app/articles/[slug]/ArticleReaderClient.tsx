@@ -19,6 +19,12 @@ interface RelatedArticle {
     summary: string;
 }
 
+interface ExplorationLink {
+    href: string;
+    title: string;
+    description: string;
+}
+
 interface ArticleReaderClientProps {
     renderedHtml: string;
     toc: TocItem[];
@@ -30,6 +36,7 @@ interface ArticleReaderClientProps {
     articleUrl: string;
     backHref: string;
     relatedArticles: RelatedArticle[];
+    explorationLinks?: ExplorationLink[];
 }
 
 export default function ArticleReaderClient({
@@ -43,6 +50,7 @@ export default function ArticleReaderClient({
     articleUrl,
     backHref,
     relatedArticles,
+    explorationLinks = [],
 }: ArticleReaderClientProps) {
     const [activeId, setActiveId] = useState<string>('');
     const [showBackTop, setShowBackTop] = useState(false);
@@ -178,6 +186,10 @@ export default function ArticleReaderClient({
                 <div className="reading-progress-bar" />
             </div>
 
+            <Link href={backHref} className="reader-back-float" aria-label="返回文章列表">
+                <i className="bi bi-arrow-left" />
+            </Link>
+
             <div className="reader-container">
                 {/* 左侧大纲导航 */}
                 {toc.length > 0 && (
@@ -267,6 +279,39 @@ export default function ArticleReaderClient({
                                     {article.summary && (
                                         <p className="related-card-summary">{article.summary}</p>
                                     )}
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {explorationLinks.length > 0 && (
+                <section className="related-section" aria-label="延伸探索">
+                    <div className="related-header">
+                        <h2 className="related-title"><i className="bi bi-compass" /> 延伸探索</h2>
+                    </div>
+                    <p className="reader-summary" style={{ margin: '0 0 1.5rem' }}>
+                        从当前主题继续延伸，快速切换到对应栏目、相关热榜和分类集合。
+                    </p>
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                            gap: '1rem',
+                        }}
+                    >
+                        {explorationLinks.map((link) => (
+                            <Link
+                                key={link.href}
+                                href={link.href}
+                                className="related-card"
+                                style={{ minHeight: 'unset', padding: '1.25rem' }}
+                            >
+                                <div className="related-card-info">
+                                    <span className="related-card-category">继续阅读</span>
+                                    <h3 className="related-card-title">{link.title}</h3>
+                                    <p className="related-card-summary">{link.description}</p>
                                 </div>
                             </Link>
                         ))}

@@ -22,6 +22,44 @@
     box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
 }
 
+/* ═══ Floating Back Button ═══ */
+.reader-back-float {
+    position: fixed;
+    top: 5rem;
+    left: 1rem;
+    z-index: 30;
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 1rem;
+    text-decoration: none;
+    border-radius: 50%;
+    background: rgba(10, 10, 15, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.25s;
+}
+
+.reader-back-float:hover {
+    color: white;
+    background: var(--primary);
+    border-color: var(--primary);
+    transform: scale(1.1);
+}
+
+@media (min-width: 768px) {
+    .reader-back-float {
+        top: 6rem;
+        left: 2rem;
+        width: 2.8rem;
+        height: 2.8rem;
+    }
+}
+
 /* ═══ Reader Layout ═══ */
 .reader-container {
     display: flex;

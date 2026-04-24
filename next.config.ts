@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
       // 常见外部图床 (GitHub / 微信公众号等)
       { protocol: 'https', hostname: '*.githubusercontent.com' },
       { protocol: 'https', hostname: 'mmbiz.qpic.cn' },
-      { protocol: 'https', hostname: 'ph-files.imgix.net' },
+      { protocol: 'https', hostname: 'ph-files.imgix.net', pathname: '/**' },
     ],
   },
 

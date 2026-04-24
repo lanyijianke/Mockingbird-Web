@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPromptById } from '@/lib/services/prompt-service';
 
 export const runtime = 'nodejs';
 
@@ -18,6 +17,7 @@ export async function GET(
         );
     }
 
+    const { getPromptById } = await import('@/lib/services/prompt-service');
     const prompt = await getPromptById(promptId);
 
     if (!prompt) {

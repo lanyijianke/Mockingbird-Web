@@ -1,14 +1,27 @@
 import type { MetadataRoute } from 'next';
+import { buildAbsoluteUrl, getSiteSeoConfig } from '@/lib/seo/config';
 
 // ════════════════════════════════════════════════════════════════
 // robots.txt — 搜索引擎爬虫控制
 // https://developers.google.com/search/docs/crawling-indexing/robots/intro
 // ════════════════════════════════════════════════════════════════
 
-const BASE_URL = process.env.SITE_URL || 'https://aigcclub.com.cn';
 const BLOCK_BAIDU = (process.env.ROBOTS_BLOCK_BAIDU || 'false').toLowerCase() === 'true';
 
 export default function robots(): MetadataRoute.Robots {
+    const config = getSiteSeoConfig();
+
+    if (!config.canIndex) {
+        return {
+            rules: [
+                {
+                    userAgent: '*',
+                    disallow: '/',
+                },
+            ],
+        };
+    }
+
     const rules: MetadataRoute.Robots['rules'] = [
         {
             // 默认爬虫策略：允许全站，禁爬 API
@@ -34,6 +47,6 @@ export default function robots(): MetadataRoute.Robots {
 
     return {
         rules,
-        sitemap: `${BASE_URL}/sitemap.xml`,
+        sitemap: buildAbsoluteUrl('/sitemap.xml'),
     };
 }

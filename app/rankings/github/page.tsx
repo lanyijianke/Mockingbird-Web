@@ -1,15 +1,35 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
+import { buildAbsoluteUrl } from '@/lib/seo/config';
+import { buildRankingMetadata } from '@/lib/seo/metadata';
 import { getGitHubTrendings } from '@/lib/services/ranking-cache';
-import { buildCollectionPageJsonLd, buildItemListJsonLd, JsonLdScript } from '@/lib/utils/json-ld';
+import { buildCollectionPageJsonLd, buildItemListJsonLd, JsonLdScript } from '@/lib/seo/schema';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildRankingMetadata({
     title: 'GitHub Trending — 排行榜',
-    description: '追踪 GitHub 全球最热门的开源项目，每 6 小时自动更新。',
-    alternates: { canonical: '/rankings/github' },
-};
+    description: '追踪 GitHub 全球最热门的开源项目，每 2 小时自动更新。',
+    canonicalPath: '/rankings/github',
+});
 
 export const revalidate = 600;
-const PAGE_URL = 'https://aigcclub.com.cn/rankings/github';
+const PAGE_URL = buildAbsoluteUrl('/rankings/github');
+const INTERNAL_LINKS = [
+    {
+        href: '/rankings/producthunt',
+        title: '切换到 ProductHunt 热榜',
+        description: '对照产品热度和开源趋势，观察哪些项目正在从代码走向产品化。',
+    },
+    {
+        href: '/prompts/categories/gemini-3',
+        title: 'Gemini 3 提示词分类',
+        description: '继续结合多模态提示词模板，验证这些热门项目的实际可用场景。',
+    },
+    {
+        href: '/ai/articles/categories/tech-practice',
+        title: '技术实战文章分类',
+        description: '把排行榜信号和文章中的方法论、案例拆解放到一起阅读。',
+    },
+];
 
 function sanitizeExternalUrl(url: string | null | undefined): string | null {
     if (!url) return null;
@@ -53,7 +73,7 @@ export default async function GitHubTrendingPage() {
                     <i className="bi bi-github" /> GitHub Trending
                 </h1>
                 <p className="zone-subtitle">
-                    追踪 GitHub 全球最热门的开源项目，每 6 小时自动更新。
+                    追踪 GitHub 全球最热门的开源项目，每 2 小时自动更新。
                 </p>
             </div>
 
@@ -119,6 +139,39 @@ export default async function GitHubTrendingPage() {
                     <p>暂无 Trending 数据，请稍后再试。</p>
                 </div>
             )}
+
+            <section className="home-section" style={{ marginTop: '3rem' }}>
+                <div className="section-bar">
+                    <h2 className="section-title">趋势延伸阅读</h2>
+                </div>
+                <p className="zone-subtitle" style={{ marginBottom: '1.25rem' }}>
+                    GitHub Trending 更适合观察技术实现层面的热度变化，结合产品热榜和专题文章会更容易判断哪些项目值得跟进。
+                </p>
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                        gap: '1rem',
+                    }}
+                >
+                    {INTERNAL_LINKS.map((link) => (
+                        <Link
+                            key={link.href}
+                            href={link.href}
+                            className="glass glass-card"
+                            style={{ padding: '1.25rem', textDecoration: 'none', color: 'inherit' }}
+                        >
+                            <div style={{ display: 'grid', gap: '0.45rem' }}>
+                                <span className="pc2-category">继续探索</span>
+                                <h3 className="pc2-title" style={{ margin: 0 }}>{link.title}</h3>
+                                <p style={{ margin: 0, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                                    {link.description}
+                                </p>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            </section>
         </div>
     );
 }

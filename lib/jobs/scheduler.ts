@@ -1,6 +1,6 @@
 import cron from 'node-cron';
-import { syncAllAsync as promptGitHubSync } from '@/lib/pipelines/prompt-readme-sync';
-import { ingestFromCsvAsync as promptCsvIngest } from '@/lib/pipelines/prompt-csv-ingestion';
+import { rankingCachePolicies } from '@/lib/cache/policies';
+import { syncAllAsync as promptSourceSync } from '@/lib/pipelines/prompt-readme-sync';
 import { refreshAllRankings } from '@/lib/services/ranking-cache';
 import { logger } from '@/lib/utils/logger';
 
@@ -8,7 +8,7 @@ import { logger } from '@/lib/utils/logger';
 // 统一 node-cron 调度器 — 替代 Knowledge 的 Quartz Jobs
 //
 // 调度策略：
-//   PromptSyncJob        → 每 60 秒   (阶段一 GitHub + 阶段二 CSV)
+//   PromptSyncJob        → 每 60 秒   (README/source 提示词同步)
 //   RankingSyncJob       → 每 2 小时  (直采 4 个排行榜并缓存)
 //
 // 通过 instrumentation.ts 在服务端进程启动时自动调用 startScheduler()。
@@ -54,24 +54,13 @@ export function startScheduler(): void {
         await runWithLock('PromptSync', async () => {
             logger.info('PromptSyncJob', '🔄 开始执行...');
 
-            // 阶段一：GitHub 同步
             try {
-                const ghReport = await promptGitHubSync();
-                if (ghReport.newlyAdded > 0) {
-                    logger.persist('PromptSyncJob', `GitHub: 解析 ${ghReport.totalParsed}, 新增 ${ghReport.newlyAdded}, 跳过 ${ghReport.skipped}`);
+                const sourceReport = await promptSourceSync();
+                if (sourceReport.newlyAdded > 0 || sourceReport.updated > 0) {
+                    logger.persist('PromptSyncJob', `Sources: 解析 ${sourceReport.totalParsed}, 新增 ${sourceReport.newlyAdded}, 更新 ${sourceReport.updated}, 跳过 ${sourceReport.skipped}`);
                 }
             } catch (err) {
-                logger.error('PromptSyncJob', 'GitHub 同步失败:', err);
-            }
-
-            // 阶段二：CSV 入库
-            try {
-                const csvReport = await promptCsvIngest();
-                if (csvReport.newlyAdded > 0) {
-                    logger.persist('PromptSyncJob', `CSV: 解析 ${csvReport.totalParsed}, 新增 ${csvReport.newlyAdded}, 跳过 ${csvReport.skipped}`);
-                }
-            } catch (err) {
-                logger.error('PromptSyncJob', 'CSV 入库失败:', err);
+                logger.error('PromptSyncJob', 'Source 同步失败:', err);
             }
         });
     }, { scheduled: false } as Record<string, unknown>);
@@ -95,13 +84,15 @@ export function startScheduler(): void {
     logger.info('Scheduler', `  📌 排行榜同步:  ${JOB_INTERVALS.rankingSync}`);
     logger.info('Scheduler', '══════════════════════════════════════');
 
-    // 启动时立即预热排行榜缓存（延迟 5 秒避免阻塞启动）
-    setTimeout(async () => {
-        logger.info('Scheduler', '🚀 启动预热：刷新排行榜缓存...');
-        await runWithLock('RankingSync', async () => {
-            await refreshAllRankings();
-        });
-    }, 5000);
+    if (rankingCachePolicies.some((policy) => policy.warmOnStartup)) {
+        // 启动时立即预热排行榜缓存（延迟 5 秒避免阻塞启动）
+        setTimeout(async () => {
+            logger.info('Scheduler', '🚀 启动预热：刷新排行榜缓存...');
+            await runWithLock('RankingSync', async () => {
+                await refreshAllRankings();
+            });
+        }, 5000);
+    }
 }
 
 export function stopScheduler(): void {

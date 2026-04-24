@@ -1,15 +1,35 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
+import { buildAbsoluteUrl } from '@/lib/seo/config';
+import { buildRankingMetadata } from '@/lib/seo/metadata';
 import { getSkillsShRankings } from '@/lib/services/ranking-cache';
-import { buildCollectionPageJsonLd, buildItemListJsonLd, JsonLdScript } from '@/lib/utils/json-ld';
+import { buildCollectionPageJsonLd, buildItemListJsonLd, JsonLdScript } from '@/lib/seo/schema';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildRankingMetadata({
     title: 'Skills Trending — 排行榜',
     description: '最受社区关注的 AI 技能与工具，实时追踪趋势变化。',
-    alternates: { canonical: '/rankings/skills-trending' },
-};
+    canonicalPath: '/rankings/skills-trending',
+});
 
 export const revalidate = 600;
-const PAGE_URL = 'https://aigcclub.com.cn/rankings/skills-trending';
+const PAGE_URL = buildAbsoluteUrl('/rankings/skills-trending');
+const INTERNAL_LINKS = [
+    {
+        href: '/rankings/skills-hot',
+        title: '查看 Skills Hot',
+        description: '对照长期关注度和短期爆发热度，识别哪些技能只是短暂上升，哪些已经进入主流。',
+    },
+    {
+        href: '/prompts/categories/gemini-3',
+        title: 'Gemini 3 提示词分类',
+        description: '把技能热度和提示词模板结合起来，快速验证是否有真实工作流价值。',
+    },
+    {
+        href: '/ai/articles/categories/tech-practice',
+        title: '技术实战文章分类',
+        description: '从技能与工具热度回流到系统化文章，补齐方法论和案例。',
+    },
+];
 
 function sanitizeExternalUrl(url: string | null | undefined): string | null {
     if (!url) return null;
@@ -97,6 +117,39 @@ export default async function SkillsTrendingPage() {
                     <p>暂无 Trending 数据，请稍后再试。</p>
                 </div>
             )}
+
+            <section className="home-section" style={{ marginTop: '3rem' }}>
+                <div className="section-bar">
+                    <h2 className="section-title">趋势线索延伸</h2>
+                </div>
+                <p className="zone-subtitle" style={{ marginBottom: '1.25rem' }}>
+                    Skills Trending 更偏向“正在被讨论”的信号。继续查看 Hot、产品热榜和提示词模板，可以把关注度变成具体动作。
+                </p>
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                        gap: '1rem',
+                    }}
+                >
+                    {INTERNAL_LINKS.map((link) => (
+                        <Link
+                            key={link.href}
+                            href={link.href}
+                            className="glass glass-card"
+                            style={{ padding: '1.25rem', textDecoration: 'none', color: 'inherit' }}
+                        >
+                            <div style={{ display: 'grid', gap: '0.45rem' }}>
+                                <span className="pc2-category">继续探索</span>
+                                <h3 className="pc2-title" style={{ margin: 0 }}>{link.title}</h3>
+                                <p style={{ margin: 0, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                                    {link.description}
+                                </p>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            </section>
         </div>
     );
 }

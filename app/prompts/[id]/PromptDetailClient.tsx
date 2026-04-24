@@ -13,6 +13,12 @@ interface RelatedPromptItem {
     copyCount: number;
 }
 
+interface ExplorationLink {
+    href: string;
+    title: string;
+    description: string;
+}
+
 interface PromptDetailClientProps {
     images: string[];
     content: string;
@@ -26,6 +32,7 @@ interface PromptDetailClientProps {
     sourceUrl?: string | null;
     isJson: boolean;
     relatedPrompts: RelatedPromptItem[];
+    explorationLinks?: ExplorationLink[];
 }
 
 function sanitizeExternalUrl(url: string | null | undefined): string | null {
@@ -51,6 +58,7 @@ export default function PromptDetailClient({
     sourceUrl,
     isJson,
     relatedPrompts,
+    explorationLinks = [],
 }: PromptDetailClientProps) {
     const [activeImage, setActiveImage] = useState(images[0] || '');
     const [copied, setCopied] = useState(false);
@@ -220,6 +228,38 @@ export default function PromptDetailClient({
                                 <div className="pd-related-card-info">
                                     <span className="pd-related-card-category">{p.category}</span>
                                     <h3 className="pd-related-card-title">{p.title}</h3>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {explorationLinks.length > 0 && (
+                <section className="pd-related-section" aria-label="延伸探索">
+                    <div className="pd-related-header">
+                        <h2 className="pd-related-title"><i className="bi bi-compass" /> 延伸探索</h2>
+                    </div>
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                            gap: '1rem',
+                        }}
+                    >
+                        {explorationLinks.map((link) => (
+                            <Link
+                                key={link.href}
+                                href={link.href}
+                                className="glass glass-card"
+                                style={{ padding: '1.25rem', textDecoration: 'none', color: 'inherit' }}
+                            >
+                                <div style={{ display: 'grid', gap: '0.45rem' }}>
+                                    <span className="pd-related-card-category">浏览更多提示词分类</span>
+                                    <h3 className="pd-related-card-title">{link.title}</h3>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                                        {link.description}
+                                    </p>
                                 </div>
                             </Link>
                         ))}

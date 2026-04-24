@@ -1,17 +1,14 @@
 import { query, queryOne, queryScalar, execute } from '@/lib/db';
 import { Prompt, PromptRow, PagedResult } from '@/lib/types';
 import { getCategoryName } from '@/lib/categories';
+import { cacheKeys, cacheTags } from '@/lib/cache/keys';
+import { cachePolicies } from '@/lib/cache/policies';
+import { getCacheManager } from '@/lib/cache/runtime';
 
 // ════════════════════════════════════════════════════════════════
 // 提示词服务 — 对应 PromptService.cs + PromptRepository.cs
 // 分类已从 DB Categories 表迁移至静态配置文件
 // ════════════════════════════════════════════════════════════════
-
-// ── 内存缓存 (统一 MemoryCache) ───────────────────────────────
-import { MemoryCache } from '@/lib/utils/memory-cache';
-
-const cache = new MemoryCache(10 * 60 * 1000); // 10 分钟 TTL
-let cacheVersion = 0;
 
 // ── 行 → DTO ─────────────────────────────────────────────────
 function rowToPrompt(row: PromptRow): Prompt {
@@ -23,6 +20,7 @@ function rowToPrompt(row: PromptRow): Prompt {
         category: row.Category || 'multimodal-prompts',
         coverImageUrl: row.CoverImageUrl || null,
         videoPreviewUrl: row.VideoPreviewUrl || null,
+        cardPreviewVideoUrl: row.CardPreviewVideoUrl || null,
         author: row.Author || null,
         sourceUrl: row.SourceUrl || null,
         imagesJson: row.ImagesJson || null,
@@ -44,17 +42,20 @@ interface PromptSitemapRow {
 
 /** 获取 Top N 提示词 */
 export async function getTopPrompts(count: number = 6): Promise<Prompt[]> {
-    const cacheKey = `prompts_top_${count}_v${cacheVersion}`;
-    const cached = cache.get(cacheKey) as Prompt[] | null;
-    if (cached) return cached;
-
-    const rows = await query<PromptRow>(
-        'SELECT * FROM Prompts WHERE IsActive = 1 ORDER BY CreatedAt DESC LIMIT ?',
-        [count]
+    return getCacheManager().getOrLoad(
+        cachePolicies.promptsTop,
+        cacheKeys.prompts.top(count),
+        async () => {
+            const rows = await query<PromptRow>(
+                'SELECT * FROM Prompts WHERE IsActive = 1 ORDER BY CreatedAt DESC LIMIT ?',
+                [count]
+            );
+            return rows.map(r => rowToPrompt(r));
+        },
+        {
+            tags: [cacheTags.prompts],
+        }
     );
-    const result = rows.map(r => rowToPrompt(r));
-    cache.set(cacheKey, result);
-    return result;
 }
 
 /** 分页查询提示词 */
@@ -87,7 +88,7 @@ export async function getPagedPrompts(
     ) ?? 0;
 
     const rows = await query<PromptRow>(
-        `SELECT Id, Title, RawTitle, Description, Category, Source, CoverImageUrl, VideoPreviewUrl, Author, SourceUrl, CopyCount, IsActive, CreatedAt, UpdatedAt 
+        `SELECT Id, Title, RawTitle, Description, Category, Source, CoverImageUrl, VideoPreviewUrl, CardPreviewVideoUrl, Author, SourceUrl, CopyCount, IsActive, CreatedAt, UpdatedAt
      FROM Prompts 
      WHERE ${whereClause}
      ORDER BY CreatedAt DESC
@@ -108,19 +109,20 @@ export async function getPagedPrompts(
 
 /** 根据 ID 获取提示词详情 */
 export async function getPromptById(id: number): Promise<Prompt | null> {
-    const cacheKey = `prompt_${id}`;
-    const cached = cache.get(cacheKey) as Prompt | null;
-    if (cached) return cached;
-
-    const row = await queryOne<PromptRow>(
-        'SELECT * FROM Prompts WHERE Id = ?',
-        [id]
+    return getCacheManager().getOrLoad(
+        cachePolicies.promptsDetail,
+        cacheKeys.prompts.detail(id),
+        async () => {
+            const row = await queryOne<PromptRow>(
+                'SELECT * FROM Prompts WHERE Id = ?',
+                [id]
+            );
+            return row ? rowToPrompt(row) : null;
+        },
+        {
+            tags: [cacheTags.prompts, cacheTags.promptDetail(id)],
+        }
     );
-    if (!row) return null;
-
-    const prompt = rowToPrompt(row);
-    cache.set(cacheKey, prompt);
-    return prompt;
 }
 
 /** 获取同分类推荐提示词（排除指定 ID） */
@@ -129,17 +131,20 @@ export async function getRelatedPrompts(
     excludeId: number,
     limit: number = 6
 ): Promise<Prompt[]> {
-    const cacheKey = `prompts_related_${category}_${excludeId}_${limit}_v${cacheVersion}`;
-    const cached = cache.get(cacheKey) as Prompt[] | null;
-    if (cached) return cached;
-
-    const rows = await query<PromptRow>(
-        'SELECT * FROM Prompts WHERE IsActive = 1 AND Category = ? AND Id != ? ORDER BY CreatedAt DESC LIMIT ?',
-        [category, excludeId, limit]
+    return getCacheManager().getOrLoad(
+        cachePolicies.promptsRelated,
+        cacheKeys.prompts.related(category, excludeId, limit),
+        async () => {
+            const rows = await query<PromptRow>(
+                'SELECT * FROM Prompts WHERE IsActive = 1 AND Category = ? AND Id != ? ORDER BY CreatedAt DESC LIMIT ?',
+                [category, excludeId, limit]
+            );
+            return rows.map(r => rowToPrompt(r));
+        },
+        {
+            tags: [cacheTags.prompts],
+        }
     );
-    const result = rows.map(r => rowToPrompt(r));
-    cache.set(cacheKey, result);
-    return result;
 }
 
 /** 复制次数追踪 */
@@ -149,8 +154,10 @@ export async function trackCopy(id: number): Promise<boolean> {
         [id]
     );
     if (result.affectedRows > 0) {
-        cache.delete(`prompt_${id}`);
-        cacheVersion++;
+        const cacheManager = getCacheManager();
+        cacheManager.invalidate(cachePolicies.promptsDetail, cacheKeys.prompts.detail(id));
+        cacheManager.invalidateTag(cacheTags.prompts);
+        cacheManager.invalidateTag(cacheTags.promptDetail(id));
         return true;
     }
     return false;

@@ -1,5 +1,3 @@
-import { startScheduler } from '@/lib/jobs/scheduler';
-
 export const runtime = 'nodejs';
 
 /**
@@ -10,6 +8,7 @@ export const runtime = 'nodejs';
 export async function register() {
     // 仅在 Node.js 运行时（非 Edge）启动调度器
     if (process.env.NEXT_RUNTIME === 'nodejs') {
+        const { startScheduler } = await import('@/lib/jobs/scheduler');
         startScheduler();
     }
 }

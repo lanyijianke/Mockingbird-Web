@@ -19,6 +19,7 @@ export interface PromptRow {
     SourceUrl: string | null;
     CoverImageUrl: string | null;
     VideoPreviewUrl: string | null;
+    CardPreviewVideoUrl: string | null;
     ImagesJson: string | null;
     CopyCount: number;
     IsActive: number;
@@ -72,6 +73,7 @@ export interface Prompt {
     category: string;  // 分类编码 (如 'gemini-3')
     coverImageUrl?: string | null;
     videoPreviewUrl?: string | null;
+    cardPreviewVideoUrl?: string | null;
     author?: string | null;
     sourceUrl?: string | null;
     imagesJson?: string | null;

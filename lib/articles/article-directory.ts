@@ -1,6 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { MemoryCache } from '@/lib/utils/memory-cache';
+import { cacheKeys, cacheTags } from '@/lib/cache/keys';
+import { cachePolicies } from '@/lib/cache/policies';
+import { getCacheManager } from '@/lib/cache/runtime';
 import { loadArticleSourceConfigs } from './source-config';
 import type {
     ArticleSourceCategory,
@@ -41,15 +43,6 @@ export interface ArticleDirectorySnapshot {
     categoriesBySite: Record<string, ArticleSourceCategory[]>;
 }
 
-const DIRECTORY_CACHE_KEY = 'github-article-directory';
-const ARTICLE_DIRECTORY_TTL_MS = 5 * 60 * 1000;
-const ARTICLE_CONTENT_TTL_MS = 30 * 60 * 1000;
-
-const directoryCache = new MemoryCache<ArticleDirectorySnapshot>(ARTICLE_DIRECTORY_TTL_MS, 10);
-const contentCache = new MemoryCache<string>(ARTICLE_CONTENT_TTL_MS, 200);
-
-let lastGoodDirectorySnapshot: ArticleDirectorySnapshot | null = null;
-const lastGoodContent = new Map<string, string>();
 const DEFAULT_CATEGORY_NAMES: Record<string, string> = {
     'ai-tech': 'AI技术',
     'ai-application': 'AI应用',
@@ -181,71 +174,56 @@ function sortEntriesNewestFirst(entries: ArticleDirectoryEntry[]): ArticleDirect
 export async function fetchAggregatedArticleDirectory(options?: {
     forceRefresh?: boolean;
 }): Promise<ArticleDirectorySnapshot> {
-    if (!options?.forceRefresh) {
-        const cached = directoryCache.get(DIRECTORY_CACHE_KEY);
-        if (cached) return cached;
-    }
-
-    const configs = loadArticleSourceConfigs();
-    if (configs.length === 0) {
-        const emptySnapshot: ArticleDirectorySnapshot = { entries: [], categoriesBySite: {} };
-        directoryCache.set(DIRECTORY_CACHE_KEY, emptySnapshot);
-        lastGoodDirectorySnapshot = emptySnapshot;
-        return emptySnapshot;
-    }
-
-    try {
-        const manifests = await Promise.all(
-            configs.map(async (config) => ({ config, manifest: await fetchSourceManifest(config) }))
-        );
-
-        const categoriesBySite: Record<string, ArticleSourceCategory[]> = {};
-        const entries: ArticleDirectoryEntry[] = [];
-
-        for (const { config, manifest } of manifests) {
-            const categories = deriveCategories(manifest);
-            categoriesBySite[manifest.site] = categories;
-
-            for (const article of manifest.articles.filter(isValidPublishedArticle)) {
-                entries.push(mapManifestArticle(config, manifest, article, categories));
+    return getCacheManager().getOrLoad(
+        cachePolicies.articlesDirectory,
+        cacheKeys.articles.directory(),
+        async () => {
+            const configs = loadArticleSourceConfigs();
+            if (configs.length === 0) {
+                return { entries: [], categoriesBySite: {} };
             }
-        }
 
-        const snapshot: ArticleDirectorySnapshot = {
-            entries: sortEntriesNewestFirst(entries),
-            categoriesBySite,
-        };
+            const manifests = await Promise.all(
+                configs.map(async (config) => ({ config, manifest: await fetchSourceManifest(config) }))
+            );
 
-        directoryCache.set(DIRECTORY_CACHE_KEY, snapshot);
-        lastGoodDirectorySnapshot = snapshot;
-        return snapshot;
-    } catch (error) {
-        if (lastGoodDirectorySnapshot) {
-            return lastGoodDirectorySnapshot;
+            const categoriesBySite: Record<string, ArticleSourceCategory[]> = {};
+            const entries: ArticleDirectoryEntry[] = [];
+
+            for (const { config, manifest } of manifests) {
+                const categories = deriveCategories(manifest);
+                categoriesBySite[manifest.site] = categories;
+
+                for (const article of manifest.articles.filter(isValidPublishedArticle)) {
+                    entries.push(mapManifestArticle(config, manifest, article, categories));
+                }
+            }
+
+            return {
+                entries: sortEntriesNewestFirst(entries),
+                categoriesBySite,
+            };
+        },
+        {
+            forceRefresh: options?.forceRefresh,
+            tags: [cacheTags.articles],
         }
-        throw error;
-    }
+    );
 }
 
 export async function fetchArticleMarkdown(
     entry: Pick<ArticleDirectoryEntry, 'contentFilePath'>,
     options?: { forceRefresh?: boolean }
 ): Promise<string> {
-    if (!options?.forceRefresh) {
-        const cached = contentCache.get(entry.contentFilePath);
-        if (cached) return cached;
-    }
-
-    try {
-        const markdown = await fs.readFile(entry.contentFilePath, 'utf-8');
-        contentCache.set(entry.contentFilePath, markdown);
-        lastGoodContent.set(entry.contentFilePath, markdown);
-        return markdown;
-    } catch (error) {
-        const fallback = lastGoodContent.get(entry.contentFilePath);
-        if (fallback) return fallback;
-        throw error;
-    }
+    return getCacheManager().getOrLoad(
+        cachePolicies.articlesMarkdown,
+        cacheKeys.articles.markdown(entry.contentFilePath),
+        async () => fs.readFile(entry.contentFilePath, 'utf-8'),
+        {
+            forceRefresh: options?.forceRefresh,
+            tags: [cacheTags.articles, cacheTags.articleContent(entry.contentFilePath)],
+        }
+    );
 }
 
 export async function getArticleDirectoryEntry(
@@ -269,8 +247,5 @@ export function resolveEntryAssetFilePath(entry: ArticleDirectoryEntry, relative
 }
 
 export function clearArticleDirectoryCache(): void {
-    directoryCache.clear();
-    contentCache.clear();
-    lastGoodDirectorySnapshot = null;
-    lastGoodContent.clear();
+    getCacheManager().invalidateTag(cacheTags.articles);
 }

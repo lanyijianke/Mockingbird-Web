@@ -1,32 +1,113 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getArticleCategories, getTopArticles, getTotalCount as getArticleCount } from '@/lib/services/article-service';
-import { getArticleDetailPath, getArticleListPath } from '@/lib/articles/article-route-paths';
-import { getTopPrompts } from '@/lib/services/prompt-service';
-import { getCategoryName } from '@/lib/categories';
-import { queryScalar } from '@/lib/db';
+import {
+  getArticleCategoryLandingPath,
+  getArticleDetailPath,
+  getArticleListPath,
+} from '@/lib/articles/article-route-paths';
+import { getCategoryName, getSubcategories } from '@/lib/categories';
+import { buildAbsoluteUrl } from '@/lib/seo/config';
+import { buildHomePageMetadata } from '@/lib/seo/metadata';
+import { buildOrganizationJsonLd, buildWebPageJsonLd, JsonLdScript } from '@/lib/seo/schema';
 import { formatBeijingDate } from '@/lib/utils/time-utils';
-import { buildOrganizationJsonLd, buildWebPageJsonLd, JsonLdScript } from '@/lib/utils/json-ld';
+import PromptGalleryCard from '@/app/prompts/PromptGalleryCard';
 
 export const runtime = 'nodejs';
-export const revalidate = 300; // ISR: 5 minutes
-const SITE_URL = process.env.SITE_URL || 'https://aigcclub.com.cn';
+export const revalidate = 300;
+const SITE_URL = buildAbsoluteUrl('/');
+const HOME_SEO = {
+  metadata: buildHomePageMetadata(),
+  webPageJsonLd: buildWebPageJsonLd(
+    '知更鸟知识库 - 泛 AI 知识平台',
+    '深度文章、提示词精选与实时热榜，助你立于 AI 前沿。',
+    SITE_URL,
+  ),
+  internalLinks: [
+    {
+      href: getArticleListPath('ai'),
+      title: '进入 AI 文章库',
+      description: '系统阅读模型、产品和工作流主题文章，快速补齐背景知识。',
+    },
+    {
+      href: '/prompts',
+      title: '浏览提示词精选',
+      description: '直接获取可复用的提示词模板，缩短从理解到实操的距离。',
+    },
+    {
+      href: '/rankings/producthunt',
+      title: '追踪实时热榜',
+      description: '同步关注 ProductHunt、GitHub 和技能榜，判断趋势是否真的在形成。',
+    },
+  ],
+};
+export const metadata = HOME_SEO.metadata;
+const HOMEPAGE_PROMPT_CATEGORY_PRIORITY = [
+  'gpt-image-2',
+  'gemini-3',
+  'seedream-45',
+  'nano-banana',
+  'seedance-2',
+  'gpt-image-15',
+];
+
+function sortPromptCategoriesForHomepage<T extends { code: string }>(categories: T[]): T[] {
+  return [...categories].sort((left, right) => {
+    const leftPriority = HOMEPAGE_PROMPT_CATEGORY_PRIORITY.indexOf(left.code);
+    const rightPriority = HOMEPAGE_PROMPT_CATEGORY_PRIORITY.indexOf(right.code);
+    const normalizedLeft = leftPriority === -1 ? Number.MAX_SAFE_INTEGER : leftPriority;
+    const normalizedRight = rightPriority === -1 ? Number.MAX_SAFE_INTEGER : rightPriority;
+
+    if (normalizedLeft !== normalizedRight) {
+      return normalizedLeft - normalizedRight;
+    }
+
+    return categories.indexOf(left) - categories.indexOf(right);
+  });
+}
 
 export default async function HomePage() {
+  const [
+    { getArticleCategories, getTopArticles, getTotalCount: getArticleCount },
+    { getPagedPrompts },
+    { queryScalar },
+  ] = await Promise.all([
+    import('@/lib/services/article-service'),
+    import('@/lib/services/prompt-service'),
+    import('@/lib/db'),
+  ]);
+
   let articles: Awaited<ReturnType<typeof getTopArticles>> = [];
-  let prompts: Awaited<ReturnType<typeof getTopPrompts>> = [];
   let articleCount = 0;
   let promptCount = 0;
   let articleCategories: Awaited<ReturnType<typeof getArticleCategories>> = [];
+  const promptCategories = sortPromptCategoriesForHomepage(getSubcategories('multimodal-prompts'));
+  let promptGroups: Array<{
+    category: (typeof promptCategories)[number];
+    prompts: Awaited<ReturnType<typeof getPagedPrompts>>['items'];
+    totalCount: number;
+  }> = [];
 
   try {
-    [articles, prompts, articleCount, promptCount, articleCategories] = await Promise.all([
+    [articles, articleCount, promptCount, articleCategories] = await Promise.all([
       getTopArticles(15, { site: 'ai' }),
-      getTopPrompts(8),
       getArticleCount({ site: 'ai' }),
       (queryScalar<number>('SELECT COUNT(*) FROM Prompts WHERE IsActive = 1')).then(v => v ?? 0),
       getArticleCategories('ai'),
     ]);
+
+    const promptGroupResults = await Promise.all(
+      promptCategories.map(async (category) => ({
+        category,
+        result: await getPagedPrompts(1, 8, category.code),
+      }))
+    );
+    promptGroups = promptGroupResults
+      .filter(({ result }) => result.items.length > 0)
+      .map(({ category, result }) => ({
+        category,
+        prompts: result.items,
+        totalCount: result.totalCount,
+      }));
   } catch (err) {
     console.error('[HomePage] 数据加载失败，使用空数据降级渲染:', err);
   }
@@ -44,16 +125,11 @@ export default async function HomePage() {
     if (!categoryGroups.has(cat)) categoryGroups.set(cat, []);
     categoryGroups.get(cat)!.push(article);
   }
-
   return (
     <>
       <JsonLdScript data={[
         buildOrganizationJsonLd(),
-        buildWebPageJsonLd(
-          '知更鸟知识库 - 泛 AI 知识平台',
-          '深度文章、提示词精选与实时热榜，助你立于 AI 前沿。',
-          SITE_URL,
-        ),
+        HOME_SEO.webPageJsonLd,
       ]} />
 
       {/* ═══ 01 Editorial Header ═══ */}
@@ -148,7 +224,13 @@ export default async function HomePage() {
             return (
               <div key={catCode} className="category-group">
                 <div className="category-group-header">
-                  <span className="category-group-name">{category.name}</span>
+                  <Link
+                    href={getArticleCategoryLandingPath('ai', catCode)}
+                    className="category-group-name"
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  >
+                    {category.name}
+                  </Link>
                   <span className="category-group-count">{catArticles.length} 篇</span>
                 </div>
                 {catArticles.length > 0 ? (
@@ -192,44 +274,86 @@ export default async function HomePage() {
       {/* ═══ 05 Prompt Showcase ═══ */}
       <section className="home-section">
         <div className="section-bar">
-          <h2 className="section-title">最新提示词精选</h2>
+          <h2 className="section-title">模型提示词画廊</h2>
           <Link href="/prompts" className="section-more">
             查看全部 →
           </Link>
         </div>
+        <p className="zone-subtitle" style={{ marginBottom: '1.5rem' }}>
+          按模型浏览最新可复用模板。每个模型展示最新 8 个，继续进入列表页可保留筛选语境。
+        </p>
 
-        <div className="prompts-masonry">
-          {prompts.map((prompt, idx) => (
-            <Link
-              key={prompt.id}
-              href={`/prompts/${prompt.id}`}
-              className="prompt-card-v2"
-              style={{ animationDelay: `${idx * 0.04}s` }}
-            >
-              <div className="pc2-cover">
-                {prompt.coverImageUrl ? (
-                  <Image
-                    src={prompt.coverImageUrl}
-                    alt={prompt.title}
-                    fill
-                    sizes="(max-width: 480px) 50vw, (max-width: 768px) 33vw, 25vw"
-                    style={{ objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div className="pc2-cover-empty">
-                    <i className="bi bi-lightbulb" />
+        {promptGroups.length > 0 ? (
+          <div style={{ display: 'grid', gap: '2.5rem' }}>
+            {promptGroups.map((group) => (
+              <section key={group.category.code} aria-label={`${group.category.name} 最新提示词`}>
+                <div className="section-bar" style={{ marginBottom: '1rem' }}>
+                  <div>
+                    <h3 className="section-title" style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>
+                      {group.category.name}
+                    </h3>
+                    <p className="zone-subtitle" style={{ margin: 0 }}>
+                      最新 {group.prompts.length} 个 / 共 {group.totalCount} 个提示词
+                    </p>
                   </div>
-                )}
-
-                <span className="pc2-stat">
-                  <i className="bi bi-clipboard" /> {prompt.copyCount.toLocaleString()}
-                </span>
-
-                <div className="pc2-overlay">
-                  <span className="pc2-category">{getCategoryName(prompt.category)}</span>
-                  <h3 className="pc2-title">{prompt.title}</h3>
+                  <Link href={`/prompts?category=${group.category.code}`} className="section-more">
+                    查看全部 →
+                  </Link>
                 </div>
+
+                <div className="prompts-masonry">
+                  {group.prompts.map((prompt, idx) => (
+                    <PromptGalleryCard
+                      key={prompt.id}
+                      href={`/prompts/${prompt.id}`}
+                      title={prompt.title}
+                      categoryName={getCategoryName(prompt.category)}
+                      copyCount={prompt.copyCount}
+                      coverImageUrl={prompt.coverImageUrl}
+                      cardPreviewVideoUrl={prompt.cardPreviewVideoUrl}
+                      videoPreviewUrl={prompt.videoPreviewUrl}
+                      animationDelay={`${idx * 0.04}s`}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state glass">
+            <i className="bi bi-collection" />
+            <p>暂无提示词</p>
+          </div>
+        )}
+      </section>
+
+      <section className="home-section">
+        <div className="section-bar">
+          <h2 className="section-title">从这里继续探索</h2>
+        </div>
+        <p className="editorial-sub" style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
+          首页负责给你一个全局入口。更细的内容深挖可以沿着文章、提示词和热榜三条线继续展开。
+        </p>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '1rem',
+          }}
+        >
+          {HOME_SEO.internalLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="category-group"
+              style={{ textDecoration: 'none', padding: '1.25rem' }}
+            >
+              <div className="category-group-header">
+                <span className="category-group-name">{link.title}</span>
               </div>
+              <p className="category-article-summary" style={{ margin: 0 }}>
+                {link.description}
+              </p>
             </Link>
           ))}
         </div>

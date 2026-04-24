@@ -1,9 +1,7 @@
 import Link from 'next/link';
+import { buildRankingsLayoutMetadata } from '@/lib/seo/metadata';
 
-export const metadata = {
-    title: '排行榜 — 知更鸟知识库',
-    description: '查看 GitHub Trending、ProductHunt 热榜、Skills.sh 排行',
-};
+export const metadata = buildRankingsLayoutMetadata();
 
 const tabs = [
     { href: '/rankings/github', icon: 'bi-github', label: 'GitHub Trending', color: '#58a6ff' },

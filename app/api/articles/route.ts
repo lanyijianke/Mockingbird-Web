@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTopArticles, getPagedArticles, getAllSlugs, trackView } from '@/lib/services/article-service';
 import { parsePaginationParams, parseCountParam, parseSearchQuery, parseCategoryParam } from '@/lib/utils/api-validation';
 
 export const runtime = 'nodejs';
 
 // GET /api/articles?page=1&pageSize=12&category=vibe-coding&q=search
 export async function GET(request: NextRequest) {
+    const { getTopArticles, getPagedArticles, getAllSlugs } = await import('@/lib/services/article-service');
     const { searchParams } = new URL(request.url);
     const site = searchParams.get('site') || 'ai';
 
@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/articles → track-view
 export async function POST(request: NextRequest) {
+    const { trackView } = await import('@/lib/services/article-service');
     const body = await request.json();
     const { slug, action } = body;
 

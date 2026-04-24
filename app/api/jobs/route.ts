@@ -1,10 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-    startScheduler, stopScheduler,
-    getSchedulerStatus,
-} from '@/lib/jobs/scheduler';
-import { syncAllAsync as promptGitHubSync } from '@/lib/pipelines/prompt-readme-sync';
-import { ingestFromCsvAsync as promptCsvIngest } from '@/lib/pipelines/prompt-csv-ingestion';
 import { verifyAdminHeaders } from '@/lib/utils/admin-auth';
 
 export const runtime = 'nodejs';
@@ -13,9 +7,10 @@ export const runtime = 'nodejs';
  * GET /api/jobs — 获取调度器状态
  * POST /api/jobs?action=start — 启动调度器
  * POST /api/jobs?action=stop — 停止调度器
- * POST /api/jobs?action=trigger-prompt-sync — 立即执行一次完整提示词同步（GitHub + 本地 CSV）
+ * POST /api/jobs?action=trigger-prompt-sync — 立即执行一次提示词源同步
  */
 export async function GET() {
+    const { getSchedulerStatus } = await import('@/lib/jobs/scheduler');
     return NextResponse.json(getSchedulerStatus());
 }
 
@@ -29,20 +24,24 @@ export async function POST(request: NextRequest) {
     const action = searchParams.get('action');
 
     switch (action) {
-        case 'start':
+        case 'start': {
+            const { startScheduler, getSchedulerStatus } = await import('@/lib/jobs/scheduler');
             startScheduler();
             return NextResponse.json({ message: '调度器已启动', ...getSchedulerStatus() });
+        }
 
-        case 'stop':
+        case 'stop': {
+            const { stopScheduler, getSchedulerStatus } = await import('@/lib/jobs/scheduler');
             stopScheduler();
             return NextResponse.json({ message: '调度器已停止', ...getSchedulerStatus() });
+        }
 
         case 'trigger-prompt-sync': {
-            console.log('[API] 手动触发提示词同步...');
-            const github = await promptGitHubSync();
-            const csv = await promptCsvIngest();
-            const report = { github, csv };
-            console.log('[API] 提示词同步完成:', report);
+            const { syncAllAsync: promptSourceSync } = await import('@/lib/pipelines/prompt-readme-sync');
+            console.log('[API] 手动触发提示词源同步...');
+            const sources = await promptSourceSync();
+            const report = { sources };
+            console.log('[API] 提示词源同步完成:', report);
             return NextResponse.json({ message: '提示词同步已执行', report });
         }
 

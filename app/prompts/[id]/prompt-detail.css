@@ -534,6 +534,7 @@
 
 .pd-related-card {
   display: block;
+  position: relative;
   border-radius: 0.75rem;
   overflow: hidden;
   text-decoration: none;

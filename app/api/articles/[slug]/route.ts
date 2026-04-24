@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getArticleBySlug } from '@/lib/services/article-service';
 
 export const runtime = 'nodejs';
 
@@ -10,6 +9,7 @@ export async function GET(
 ) {
     const { slug } = await params;
     const site = new URL(request.url).searchParams.get('site') || 'ai';
+    const { getArticleBySlug } = await import('@/lib/services/article-service');
     const article = await getArticleBySlug(slug, { site });
 
     if (!article) {

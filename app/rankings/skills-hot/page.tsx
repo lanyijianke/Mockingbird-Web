@@ -1,15 +1,35 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
+import { buildAbsoluteUrl } from '@/lib/seo/config';
+import { buildRankingMetadata } from '@/lib/seo/metadata';
 import { getSkillsShRankings } from '@/lib/services/ranking-cache';
-import { buildCollectionPageJsonLd, buildItemListJsonLd, JsonLdScript } from '@/lib/utils/json-ld';
+import { buildCollectionPageJsonLd, buildItemListJsonLd, JsonLdScript } from '@/lib/seo/schema';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildRankingMetadata({
     title: 'Skills Hot — 排行榜',
     description: '当下最火热的 AI 技能排行，发现社区最受欢迎的工具。',
-    alternates: { canonical: '/rankings/skills-hot' },
-};
+    canonicalPath: '/rankings/skills-hot',
+});
 
 export const revalidate = 600;
-const PAGE_URL = 'https://aigcclub.com.cn/rankings/skills-hot';
+const PAGE_URL = buildAbsoluteUrl('/rankings/skills-hot');
+const INTERNAL_LINKS = [
+    {
+        href: '/rankings/skills-trending',
+        title: '查看 Skills Trending',
+        description: '从爆发热度切回持续趋势，判断哪些技能正在形成稳定关注。',
+    },
+    {
+        href: '/prompts/categories/gemini-3',
+        title: 'Gemini 3 提示词分类',
+        description: '把热门技能和提示词模板联动起来，快速验证可复用的实操路径。',
+    },
+    {
+        href: '/ai/articles/categories/agents',
+        title: '智能体文章分类',
+        description: '把热门技能和系统化文章结合起来，快速补齐背景与方法论。',
+    },
+];
 
 function sanitizeExternalUrl(url: string | null | undefined): string | null {
     if (!url) return null;
@@ -94,6 +114,39 @@ export default async function SkillsHotPage() {
                     <p>暂无 Hot 数据，请稍后再试。</p>
                 </div>
             )}
+
+            <section className="home-section" style={{ marginTop: '3rem' }}>
+                <div className="section-bar">
+                    <h2 className="section-title">热门技能延伸探索</h2>
+                </div>
+                <p className="zone-subtitle" style={{ marginBottom: '1.25rem' }}>
+                    Skills Hot 反映当下最强的短期关注度。继续对照 Trending、GitHub 和文章专题，能更快分辨“噪音”与“真实机会”。
+                </p>
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                        gap: '1rem',
+                    }}
+                >
+                    {INTERNAL_LINKS.map((link) => (
+                        <Link
+                            key={link.href}
+                            href={link.href}
+                            className="glass glass-card"
+                            style={{ padding: '1.25rem', textDecoration: 'none', color: 'inherit' }}
+                        >
+                            <div style={{ display: 'grid', gap: '0.45rem' }}>
+                                <span className="pc2-category">继续探索</span>
+                                <h3 className="pc2-title" style={{ margin: 0 }}>{link.title}</h3>
+                                <p style={{ margin: 0, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                                    {link.description}
+                                </p>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            </section>
         </div>
     );
 }

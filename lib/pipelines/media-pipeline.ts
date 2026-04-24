@@ -69,12 +69,20 @@ export async function downloadMedia(
         const response = await fetch(originalUrl, {
             headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
             signal: AbortSignal.timeout(30_000),
-            redirect: 'error',
+            redirect: 'follow',
         });
 
         if (!response.ok) {
             logger.warn('MediaPipeline', `下载失败: HTTP ${response.status} for URL ${originalUrl}`);
             return originalUrl;
+        }
+
+        if (response.url && response.url !== originalUrl) {
+            const redirectedValidation = await validateOutboundUrl(response.url);
+            if (!redirectedValidation.ok) {
+                logger.warn('MediaPipeline', `下载失败: 重定向目标不安全 (${response.url}) for URL ${originalUrl}`);
+                return originalUrl;
+            }
         }
 
         const contentLength = Number.parseInt(response.headers.get('content-length') || '0', 10);

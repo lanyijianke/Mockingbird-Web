@@ -1,14 +1,32 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
-import { getArticleCategories, getPagedArticles } from '@/lib/services/article-service';
 import { getArticleDetailPath, getArticleListPath } from '@/lib/articles/article-route-paths';
-import { buildBreadcrumbJsonLd, buildCollectionPageJsonLd, JsonLdScript } from '@/lib/utils/json-ld';
+import { getSiteSeoConfig } from '@/lib/seo/config';
+import { buildArticlesListMetadata } from '@/lib/seo/metadata';
+import { buildBreadcrumbJsonLd, buildCollectionPageJsonLd, JsonLdScript } from '@/lib/seo/schema';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const SITE_URL = process.env.SITE_URL || 'https://aigcclub.com.cn';
+const SITE_URL = getSiteSeoConfig().siteUrl;
+const INTERNAL_LINKS = [
+    {
+        href: '/prompts',
+        title: '查找研究类提示词',
+        description: '把金融文章里的研究框架转成可复制的分析、摘要和对比提示词。',
+    },
+    {
+        href: '/rankings/github',
+        title: '查看 GitHub Trending',
+        description: '关注数据分析、量化工具和开发框架的开源趋势，补充技术信号。',
+    },
+    {
+        href: '/ai/articles',
+        title: '切换到 AI 文章库',
+        description: '对照通用 AI 主题文章，建立从技术到金融应用的跨栏目理解。',
+    },
+];
 
 function normalizePage(rawPage?: string): number {
     const parsed = Number.parseInt(rawPage || '1', 10);
@@ -41,6 +59,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     const params = await searchParams;
     const page = normalizePage(params.page);
+    const { getArticleCategories } = await import('@/lib/services/article-service');
     const categories = await getArticleCategories('finance');
     const categoryCodes = new Set(categories.map((item) => item.code));
     const category = normalizeCategory(params.category, categoryCodes);
@@ -51,25 +70,12 @@ export async function generateMetadata({
     if (category) title = `${categories.find((item) => item.code === category)?.name || category} 文章`;
     if (q) title = `搜索「${q}」`;
 
-    return {
+    return buildArticlesListMetadata({
         title,
         description: `浏览知更鸟知识库的金融文章合集 — ${title}`,
-        alternates: { canonical: canonicalPath },
-        robots: q ? {
-            index: false,
-            follow: true,
-            googleBot: {
-                index: false,
-                follow: true,
-            },
-        } : undefined,
-        openGraph: {
-            title: `${title} - 知更鸟知识库`,
-            description: `浏览知更鸟知识库的金融文章合集 — ${title}`,
-            url: `${SITE_URL}${canonicalPath}`,
-            type: 'website',
-        },
-    };
+        canonicalPath,
+        searchQuery: q,
+    });
 }
 
 export default async function FinanceArticlesPage({
@@ -77,12 +83,14 @@ export default async function FinanceArticlesPage({
 }: {
     searchParams: Promise<{ page?: string; category?: string; q?: string }>;
 }) {
+    const { getArticleCategories, getPagedArticles } = await import('@/lib/services/article-service');
     const params = await searchParams;
     const page = normalizePage(params.page);
     const articleCategories = await getArticleCategories('finance');
     const categoryCodes = new Set(articleCategories.map((item) => item.code));
     const category = normalizeCategory(params.category, categoryCodes);
     const q = normalizeSearchQuery(params.q);
+    const canonicalPath = buildArticlesCanonicalPath(page, category);
 
     const result = await getPagedArticles(page, 10, category, q, { site: 'finance' });
 
@@ -100,9 +108,9 @@ export default async function FinanceArticlesPage({
             <JsonLdScript data={[
                 buildBreadcrumbJsonLd([
                     { name: '首页', url: SITE_URL },
-                    { name: '金融文章', url: `${SITE_URL}${getArticleListPath('finance')}` },
+                    { name: '金融文章', url: `${SITE_URL}${canonicalPath}` },
                 ]),
-                buildCollectionPageJsonLd('金融文章库', '浏览知更鸟知识库的全部金融文章', `${SITE_URL}${getArticleListPath('finance')}`),
+                buildCollectionPageJsonLd('金融文章库', '浏览知更鸟知识库的全部金融文章', `${SITE_URL}${canonicalPath}`),
             ]} />
 
             <nav className="breadcrumb">
@@ -220,6 +228,39 @@ export default async function FinanceArticlesPage({
                     )}
                 </nav>
             )}
+
+            <section className="home-section" style={{ marginTop: '3rem' }}>
+                <div className="section-bar">
+                    <h2 className="section-title">金融文章延伸导航</h2>
+                </div>
+                <p className="zone-subtitle" style={{ marginBottom: '1.25rem' }}>
+                    金融文章适合做主题沉淀。继续搭配提示词库、GitHub 趋势和 AI 总栏目，会更容易形成可执行的研究流。
+                </p>
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                        gap: '1rem',
+                    }}
+                >
+                    {INTERNAL_LINKS.map((link) => (
+                        <Link
+                            key={link.href}
+                            href={link.href}
+                            className="article-item glass glass-card"
+                            style={{ display: 'block', padding: '1.25rem', textDecoration: 'none' }}
+                        >
+                            <div className="article-info">
+                                <div className="article-meta">
+                                    <span className="category">延伸阅读</span>
+                                </div>
+                                <h2 className="article-title">{link.title}</h2>
+                                <p className="article-summary">{link.description}</p>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+            </section>
         </div>
     );
 }

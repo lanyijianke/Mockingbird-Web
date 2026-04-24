@@ -61,13 +61,6 @@ lib/pipelines/prompt-readme-sync.ts
 
 `syncAllAsync()` remains the remote prompt sync entrypoint. Internally it delegates to the source framework.
 
-Local CSV ingestion remains separate:
-
-```text
-lib/pipelines/prompt-csv-ingestion.ts
-raw-incoming/prompts/inbox
-```
-
 ## Adding A New Prompt Source
 
 ### 1. Inspect The Source
@@ -213,17 +206,11 @@ Expected response shape:
 {
   "message": "提示词同步已执行",
   "report": {
-    "github": {
+    "sources": {
       "totalParsed": 126,
       "newlyAdded": 0,
       "updated": 0,
       "skipped": 126
-    },
-    "csv": {
-      "totalParsed": 0,
-      "newlyAdded": 0,
-      "updated": 0,
-      "skipped": 0
     }
   }
 }
@@ -239,8 +226,7 @@ Run focused tests:
 npm test -- \
   ../Tests/knowledge-web/unit/prompt-source-config.test.ts \
   ../Tests/knowledge-web/unit/prompt-readme-sync.test.ts \
-  ../Tests/knowledge-web/unit/prompt-source-remote-sync.test.ts \
-  ../Tests/knowledge-web/unit/prompt-csv-ingestion.test.ts
+  ../Tests/knowledge-web/unit/prompt-source-remote-sync.test.ts
 ```
 
 Run prompt gallery tests when changing `/prompts` UX:

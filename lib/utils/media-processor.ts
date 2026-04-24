@@ -9,6 +9,13 @@ import { logger } from '@/lib/utils/logger';
 // 通过 child_process 调用 ffmpeg / yt-dlp CLI
 // ════════════════════════════════════════════════════════════════
 
+let ytDlpBinaryAvailable: boolean | null = null;
+let ytDlpMissingWarned = false;
+
+function isMissingBinaryError(error: string): boolean {
+    return /\bENOENT\b/i.test(error);
+}
+
 /**
  * 通用子进程执行器
  */
@@ -111,6 +118,55 @@ export async function compressVideo(videoPath: string): Promise<boolean> {
     } catch (err) {
         logger.error('MediaProcessor', `视频压缩异常: ${videoPath}`, err);
         return false;
+    }
+}
+
+/**
+ * 生成卡片悬停预览视频：短时长 / 低分辨率 / 静音
+ * 保留原始详情视频，额外产出一个更轻的列表预览资源。
+ */
+export async function createCardPreviewVideo(
+    videoPath: string,
+    durationSeconds: number = 4
+): Promise<string | null> {
+    try {
+        await fs.access(videoPath);
+    } catch {
+        console.warn('[预览] 视频文件不存在:', videoPath);
+        return null;
+    }
+
+    try {
+        const parsed = path.parse(videoPath);
+        const previewFileName = `${parsed.name}.card.mp4`;
+        const previewPath = path.join(parsed.dir, previewFileName);
+
+        const args = [
+            '-y',
+            '-ss', '0',
+            '-i', videoPath,
+            '-t', String(durationSeconds),
+            '-an',
+            '-vf', 'scale=-2:360',
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-b:v', '240k',
+            '-movflags', '+faststart',
+            previewPath,
+        ];
+
+        const result = await runProcess('ffmpeg', args, 60);
+        if (!result.success) {
+            logger.warn('MediaProcessor', `卡片预览视频生成失败: ${result.error}`);
+            await safeUnlink(previewPath);
+            return null;
+        }
+
+        await fs.access(previewPath);
+        return previewFileName;
+    } catch (err) {
+        logger.error('MediaProcessor', `卡片预览视频生成异常: ${videoPath}`, err);
+        return null;
     }
 }
 
@@ -227,6 +283,7 @@ export async function downloadVideoWithAudio(
     outputDirectory: string
 ): Promise<string | null> {
     if (!sourcePageUrl) return null;
+    if (ytDlpBinaryAvailable === false) return null;
 
     try {
         await fs.mkdir(outputDirectory, { recursive: true });
@@ -248,6 +305,7 @@ export async function downloadVideoWithAudio(
         const result = await runProcess('yt-dlp', args, 120);
 
         if (result.success) {
+            ytDlpBinaryAvailable = true;
             try {
                 const stat = await fs.stat(outputPath);
                 console.log(`[yt-dlp] 下载成功: ${fileName} (${(stat.size / 1024 / 1024).toFixed(1)} MB)`);
@@ -256,6 +314,15 @@ export async function downloadVideoWithAudio(
                 return null;
             }
         } else {
+            if (isMissingBinaryError(result.error)) {
+                ytDlpBinaryAvailable = false;
+                if (!ytDlpMissingWarned) {
+                    logger.warn('MediaProcessor', 'yt-dlp 未安装，跳过 yt-dlp 视频下载并使用 HTTP fallback');
+                    ytDlpMissingWarned = true;
+                }
+                return null;
+            }
+
             logger.warn('MediaProcessor', `yt-dlp 下载失败: ${result.error}`);
             return null;
         }

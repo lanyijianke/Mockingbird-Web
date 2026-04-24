@@ -1,4 +1,4 @@
-export type PromptSourceType = 'github-readme' | 'csv-local' | 'json-api' | 'manual';
+export type PromptSourceType = 'github-readme' | 'json-api' | 'manual';
 
 export interface PromptSourceConfig {
     id: string;

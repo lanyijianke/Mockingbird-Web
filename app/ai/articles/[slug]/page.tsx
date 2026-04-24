@@ -1,17 +1,23 @@
 import { notFound } from 'next/navigation';
-import { getArticleBySlug, getAllSlugs, getRelatedArticles } from '@/lib/services/article-service';
-import { getArticleDetailPath, getArticleListPath } from '@/lib/articles/article-route-paths';
+import {
+    getArticleCategoryLandingPath,
+    getArticleDetailPath,
+    getArticleListPath,
+} from '@/lib/articles/article-route-paths';
 import type { Metadata } from 'next';
-import { buildArticleJsonLd, buildBreadcrumbJsonLd, JsonLdScript } from '@/lib/utils/json-ld';
+import { getSiteSeoConfig } from '@/lib/seo/config';
+import { buildArticleDetailMetadata } from '@/lib/seo/metadata';
+import { buildArticleJsonLd, buildBreadcrumbJsonLd, JsonLdScript } from '@/lib/seo/schema';
 import ArticleReaderClient from '@/app/articles/[slug]/ArticleReaderClient';
 import '@/app/articles/[slug]/article-reader.css';
 
-const SITE_URL = process.env.SITE_URL || 'https://aigcclub.com.cn';
+const SITE_URL = getSiteSeoConfig().siteUrl;
 
 export const runtime = 'nodejs';
 export const revalidate = 3600;
 
 export async function generateStaticParams() {
+    const { getAllSlugs } = await import('@/lib/services/article-service');
     const slugs = await getAllSlugs('ai');
     return slugs.map((slug) => ({ slug }));
 }
@@ -21,33 +27,22 @@ export async function generateMetadata({
 }: {
     params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
+    const { getArticleBySlug } = await import('@/lib/services/article-service');
     const { slug } = await params;
     const article = await getArticleBySlug(slug, { site: 'ai' });
     if (!article) return { title: '文章未找到' };
 
     const canonicalPath = getArticleDetailPath('ai', slug);
 
-    return {
+    return buildArticleDetailMetadata({
         title: article.seoTitle || article.title,
         description: article.seoDescription || article.summary,
+        canonicalPath,
         keywords: article.seoKeywords || undefined,
-        alternates: { canonical: canonicalPath },
-        openGraph: {
-            title: article.title,
-            description: article.summary || undefined,
-            type: 'article',
-            url: `${SITE_URL}${canonicalPath}`,
-            images: article.coverUrl ? [article.coverUrl] : undefined,
-            publishedTime: article.createdAt,
-            modifiedTime: article.updatedAt || undefined,
-        },
-        twitter: {
-            card: 'summary_large_image',
-            title: article.title,
-            description: article.summary || undefined,
-            images: article.coverUrl ? [article.coverUrl] : undefined,
-        },
-    };
+        coverImageUrl: article.coverUrl,
+        createdAt: article.createdAt,
+        updatedAt: article.updatedAt,
+    });
 }
 
 interface TocItem {
@@ -96,6 +91,7 @@ export default async function AiArticleDetailPage({
 }: {
     params: Promise<{ slug: string }>;
 }) {
+    const { getArticleBySlug, getRelatedArticles } = await import('@/lib/services/article-service');
     const { slug } = await params;
     const article = await getArticleBySlug(slug, { site: 'ai' });
     if (!article) notFound();
@@ -131,13 +127,30 @@ export default async function AiArticleDetailPage({
 
     const renderedHtml = String(result).replace(/<img /g, '<img loading="lazy" ');
     const articleUrl = `${SITE_URL}${getArticleDetailPath('ai', slug)}`;
+    const explorationLinks = [
+        {
+            href: getArticleCategoryLandingPath('ai', article.category),
+            title: `更多 ${article.categoryName} 文章`,
+            description: `进入 ${article.categoryName} 分类页，集中浏览同主题文章。`,
+        },
+        {
+            href: '/prompts/categories/gemini-3',
+            title: '相关提示词分类',
+            description: '从文章切到可直接复用的多模态提示词模板，缩短落地路径。',
+        },
+        {
+            href: '/rankings/producthunt',
+            title: '跟进 ProductHunt 热榜',
+            description: '结合热门新产品观察 AI 工具趋势，补充文章里的行业上下文。',
+        },
+    ];
 
     return (
         <>
             <JsonLdScript data={[
                 buildArticleJsonLd({
-                    title: article.title,
-                    summary: article.summary,
+                    title: article.seoTitle || article.title,
+                    summary: article.seoDescription || article.summary,
                     url: articleUrl,
                     coverUrl: article.coverUrl,
                     createdAt: article.createdAt,
@@ -147,7 +160,7 @@ export default async function AiArticleDetailPage({
                 buildBreadcrumbJsonLd([
                     { name: '首页', url: SITE_URL },
                     { name: 'AI 文章', url: `${SITE_URL}${getArticleListPath('ai')}` },
-                    { name: article.title, url: articleUrl },
+                    { name: article.seoTitle || article.title, url: articleUrl },
                 ]),
             ]} />
 
@@ -169,6 +182,7 @@ export default async function AiArticleDetailPage({
                     category: item.categoryName,
                     summary: item.summary,
                 }))}
+                explorationLinks={explorationLinks}
             />
         </>
     );

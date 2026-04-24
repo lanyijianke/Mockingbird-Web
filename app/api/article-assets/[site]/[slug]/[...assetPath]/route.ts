@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { NextRequest, NextResponse } from 'next/server';
+import { cacheHttpHeaders } from '@/lib/cache/policies';
 import { getArticleDirectoryEntry, resolveEntryAssetFilePath } from '@/lib/articles/article-directory';
 
 export const runtime = 'nodejs';
@@ -42,7 +43,7 @@ export async function GET(
             status: 200,
             headers: {
                 'Content-Type': getContentType(filePath),
-                'Cache-Control': 'public, max-age=3600',
+                'Cache-Control': cacheHttpHeaders.articleAsset,
             },
         });
     } catch {

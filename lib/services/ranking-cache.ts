@@ -1,6 +1,8 @@
 import { GitHubTrending, ProductHuntRanking, SkillsShRanking } from '@/lib/types';
 import { scrapeGitHubTrending, scrapeProductHunt, scrapeSkillsSh } from './ranking-scrapers';
-import { MemoryCache } from '@/lib/utils/memory-cache';
+import { cacheKeys, cacheTags } from '@/lib/cache/keys';
+import { cachePolicies, rankingCachePolicies } from '@/lib/cache/policies';
+import { getCacheManager } from '@/lib/cache/runtime';
 import { logger } from '@/lib/utils/logger';
 
 // ════════════════════════════════════════════════════════════════
@@ -8,31 +10,50 @@ import { logger } from '@/lib/utils/logger';
 // 直接从源站抓取数据，2h TTL 统一 MemoryCache
 // ════════════════════════════════════════════════════════════════
 
-const cache = new MemoryCache(2 * 60 * 60 * 1000); // 2 小时 TTL
+type RankingLoader<T> = () => Promise<T[]>;
+
+async function loadRankings<T>(
+    policy: typeof rankingCachePolicies[number],
+    keyParts: readonly (string | number | boolean)[],
+    sourceName: string,
+    loader: RankingLoader<T>
+): Promise<T[]> {
+    try {
+        return await getCacheManager().getOrLoad(
+            policy,
+            keyParts,
+            async () => {
+                const result = await loader();
+                if (result.length === 0) {
+                    logger.warn('RankingCache', `${sourceName} 直采未获取到数据`);
+                    return result;
+                }
+
+                logger.info('RankingCache', `✅ ${sourceName} 直采成功: ${result.length} 条`);
+                return result;
+            },
+            {
+                tags: [cacheTags.rankings],
+                isEmpty: (value) => Array.isArray(value) && value.length === 0,
+            }
+        );
+    } catch (err) {
+        logger.error('RankingCache', `${sourceName} 抓取失败`, err);
+        return [];
+    }
+}
 
 // ════════════════════════════════════════════════════════════════
 // GitHub Trending
 // ════════════════════════════════════════════════════════════════
 
 export async function getGitHubTrendings(): Promise<GitHubTrending[]> {
-    const cacheKey = 'github-trending';
-    const cached = cache.get(cacheKey) as GitHubTrending[] | null;
-    if (cached) return cached;
-
-    try {
-        const result = await scrapeGitHubTrending();
-        if (result.length === 0) {
-            logger.warn('RankingCache', 'GitHub Trending 直采未获取到数据');
-            return [];
-        }
-
-        cache.set(cacheKey, result);
-        logger.info('RankingCache', `✅ GitHub Trending 直采成功: ${result.length} 条`);
-        return result;
-    } catch (err) {
-        logger.error('RankingCache', 'GitHub Trending 抓取失败', err);
-        return [];
-    }
+    return loadRankings(
+        cachePolicies.rankingsGithub,
+        cacheKeys.rankings.github(),
+        'GitHub Trending',
+        scrapeGitHubTrending
+    );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -40,24 +61,12 @@ export async function getGitHubTrendings(): Promise<GitHubTrending[]> {
 // ════════════════════════════════════════════════════════════════
 
 export async function getProductHuntRankings(): Promise<ProductHuntRanking[]> {
-    const cacheKey = 'producthunt';
-    const cached = cache.get(cacheKey) as ProductHuntRanking[] | null;
-    if (cached) return cached;
-
-    try {
-        const result = await scrapeProductHunt();
-        if (result.length === 0) {
-            logger.warn('RankingCache', 'ProductHunt 直采未获取到数据');
-            return [];
-        }
-
-        cache.set(cacheKey, result);
-        logger.info('RankingCache', `✅ ProductHunt 直采成功: ${result.length} 条`);
-        return result;
-    } catch (err) {
-        logger.error('RankingCache', 'ProductHunt 抓取失败', err);
-        return [];
-    }
+    return loadRankings(
+        cachePolicies.rankingsProductHunt,
+        cacheKeys.rankings.producthunt(),
+        'ProductHunt',
+        scrapeProductHunt
+    );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -65,25 +74,17 @@ export async function getProductHuntRankings(): Promise<ProductHuntRanking[]> {
 // ════════════════════════════════════════════════════════════════
 
 export async function getSkillsShRankings(listType: string = 'trending'): Promise<SkillsShRanking[]> {
-    const cacheKey = `skillssh-${listType}`;
-    const cached = cache.get(cacheKey) as SkillsShRanking[] | null;
-    if (cached) return cached;
-
     const validType = listType === 'hot' ? 'hot' : 'trending';
-    try {
-        const result = await scrapeSkillsSh(validType);
-        if (result.length === 0) {
-            logger.warn('RankingCache', `Skills.sh ${listType} 直采未获取到数据`);
-            return [];
-        }
+    const policy = validType === 'hot'
+        ? cachePolicies.rankingsSkillsHot
+        : cachePolicies.rankingsSkillsTrending;
 
-        cache.set(cacheKey, result);
-        logger.info('RankingCache', `✅ Skills.sh ${listType} 直采成功: ${result.length} 条`);
-        return result;
-    } catch (err) {
-        logger.error('RankingCache', `Skills.sh ${listType} 抓取失败`, err);
-        return [];
-    }
+    return loadRankings(
+        policy,
+        cacheKeys.rankings.skills(validType),
+        `Skills.sh ${validType}`,
+        async () => scrapeSkillsSh(validType)
+    );
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -98,10 +99,66 @@ export async function refreshAllRankings(): Promise<void> {
     logger.info('RankingCache', '🔄 开始刷新所有排行榜...');
 
     const tasks = [
-        { name: 'GitHub Trending', fn: async () => { const r = await scrapeGitHubTrending(); cache.set('github-trending', r); return r.length; } },
-        { name: 'ProductHunt', fn: async () => { const r = await scrapeProductHunt(); cache.set('producthunt', r); return r.length; } },
-        { name: 'Skills.sh Trending', fn: async () => { const r = await scrapeSkillsSh('trending'); cache.set('skillssh-trending', r); return r.length; } },
-        { name: 'Skills.sh Hot', fn: async () => { const r = await scrapeSkillsSh('hot'); cache.set('skillssh-hot', r); return r.length; } },
+        {
+            name: 'GitHub Trending',
+            fn: async () => {
+                const result = await getCacheManager().warm(
+                    cachePolicies.rankingsGithub,
+                    cacheKeys.rankings.github(),
+                    scrapeGitHubTrending,
+                    {
+                        tags: [cacheTags.rankings],
+                        isEmpty: (value) => Array.isArray(value) && value.length === 0,
+                    }
+                );
+                return result.length;
+            },
+        },
+        {
+            name: 'ProductHunt',
+            fn: async () => {
+                const result = await getCacheManager().warm(
+                    cachePolicies.rankingsProductHunt,
+                    cacheKeys.rankings.producthunt(),
+                    scrapeProductHunt,
+                    {
+                        tags: [cacheTags.rankings],
+                        isEmpty: (value) => Array.isArray(value) && value.length === 0,
+                    }
+                );
+                return result.length;
+            },
+        },
+        {
+            name: 'Skills.sh Trending',
+            fn: async () => {
+                const result = await getCacheManager().warm(
+                    cachePolicies.rankingsSkillsTrending,
+                    cacheKeys.rankings.skills('trending'),
+                    async () => scrapeSkillsSh('trending'),
+                    {
+                        tags: [cacheTags.rankings],
+                        isEmpty: (value) => Array.isArray(value) && value.length === 0,
+                    }
+                );
+                return result.length;
+            },
+        },
+        {
+            name: 'Skills.sh Hot',
+            fn: async () => {
+                const result = await getCacheManager().warm(
+                    cachePolicies.rankingsSkillsHot,
+                    cacheKeys.rankings.skills('hot'),
+                    async () => scrapeSkillsSh('hot'),
+                    {
+                        tags: [cacheTags.rankings],
+                        isEmpty: (value) => Array.isArray(value) && value.length === 0,
+                    }
+                );
+                return result.length;
+            },
+        },
     ];
 
     for (const task of tasks) {

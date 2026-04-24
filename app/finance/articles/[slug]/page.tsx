@@ -1,17 +1,37 @@
 import { notFound } from 'next/navigation';
-import { getArticleBySlug, getAllSlugs, getRelatedArticles } from '@/lib/services/article-service';
 import { getArticleDetailPath, getArticleListPath } from '@/lib/articles/article-route-paths';
 import type { Metadata } from 'next';
-import { buildArticleJsonLd, buildBreadcrumbJsonLd, JsonLdScript } from '@/lib/utils/json-ld';
+import { getSiteSeoConfig } from '@/lib/seo/config';
+import { buildArticleDetailMetadata } from '@/lib/seo/metadata';
+import { buildArticleJsonLd, buildBreadcrumbJsonLd, JsonLdScript } from '@/lib/seo/schema';
 import ArticleReaderClient from '@/app/articles/[slug]/ArticleReaderClient';
 import '@/app/articles/[slug]/article-reader.css';
 
-const SITE_URL = process.env.SITE_URL || 'https://aigcclub.com.cn';
+const SITE_URL = getSiteSeoConfig().siteUrl;
 
 export const runtime = 'nodejs';
 export const revalidate = 3600;
 
+const ARTICLE_EXPLORATION_LINKS = [
+    {
+        href: getArticleListPath('finance'),
+        title: '继续浏览金融文章',
+        description: '返回金融文章列表，查看同一主题下的宏观、市场与策略内容。',
+    },
+    {
+        href: '/rankings/github',
+        title: '查看 GitHub 趋势项目',
+        description: '把金融研究和开发工具趋势结合起来，快速发现值得跟进的项目。',
+    },
+    {
+        href: '/prompts',
+        title: '查找分析类提示词',
+        description: '补充适用于研究、摘要和数据整理场景的提示词模板。',
+    },
+];
+
 export async function generateStaticParams() {
+    const { getAllSlugs } = await import('@/lib/services/article-service');
     const slugs = await getAllSlugs('finance');
     return slugs.map((slug) => ({ slug }));
 }
@@ -21,33 +41,22 @@ export async function generateMetadata({
 }: {
     params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
+    const { getArticleBySlug } = await import('@/lib/services/article-service');
     const { slug } = await params;
     const article = await getArticleBySlug(slug, { site: 'finance' });
     if (!article) return { title: '文章未找到' };
 
     const canonicalPath = getArticleDetailPath('finance', slug);
 
-    return {
+    return buildArticleDetailMetadata({
         title: article.seoTitle || article.title,
         description: article.seoDescription || article.summary,
+        canonicalPath,
         keywords: article.seoKeywords || undefined,
-        alternates: { canonical: canonicalPath },
-        openGraph: {
-            title: article.title,
-            description: article.summary || undefined,
-            type: 'article',
-            url: `${SITE_URL}${canonicalPath}`,
-            images: article.coverUrl ? [article.coverUrl] : undefined,
-            publishedTime: article.createdAt,
-            modifiedTime: article.updatedAt || undefined,
-        },
-        twitter: {
-            card: 'summary_large_image',
-            title: article.title,
-            description: article.summary || undefined,
-            images: article.coverUrl ? [article.coverUrl] : undefined,
-        },
-    };
+        coverImageUrl: article.coverUrl,
+        createdAt: article.createdAt,
+        updatedAt: article.updatedAt,
+    });
 }
 
 interface TocItem {
@@ -96,6 +105,7 @@ export default async function FinanceArticleDetailPage({
 }: {
     params: Promise<{ slug: string }>;
 }) {
+    const { getArticleBySlug, getRelatedArticles } = await import('@/lib/services/article-service');
     const { slug } = await params;
     const article = await getArticleBySlug(slug, { site: 'finance' });
     if (!article) notFound();
@@ -136,8 +146,8 @@ export default async function FinanceArticleDetailPage({
         <>
             <JsonLdScript data={[
                 buildArticleJsonLd({
-                    title: article.title,
-                    summary: article.summary,
+                    title: article.seoTitle || article.title,
+                    summary: article.seoDescription || article.summary,
                     url: articleUrl,
                     coverUrl: article.coverUrl,
                     createdAt: article.createdAt,
@@ -147,7 +157,7 @@ export default async function FinanceArticleDetailPage({
                 buildBreadcrumbJsonLd([
                     { name: '首页', url: SITE_URL },
                     { name: '金融文章', url: `${SITE_URL}${getArticleListPath('finance')}` },
-                    { name: article.title, url: articleUrl },
+                    { name: article.seoTitle || article.title, url: articleUrl },
                 ]),
             ]} />
 
@@ -169,6 +179,7 @@ export default async function FinanceArticleDetailPage({
                     category: item.categoryName,
                     summary: item.summary,
                 }))}
+                explorationLinks={ARTICLE_EXPLORATION_LINKS}
             />
         </>
     );

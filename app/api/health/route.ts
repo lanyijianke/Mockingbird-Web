@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
-import { queryScalar } from '@/lib/db';
-import { getTotalCount as getArticleCount } from '@/lib/services/article-service';
-import { getSchedulerStatus } from '@/lib/jobs/scheduler';
 
 export const runtime = 'nodejs';
 
 // GET /api/health — 增强版健康检查
 export async function GET() {
+    const [{ queryScalar }, { getTotalCount: getArticleCount }, { getSchedulerStatus }] = await Promise.all([
+        import('@/lib/db'),
+        import('@/lib/services/article-service'),
+        import('@/lib/jobs/scheduler'),
+    ]);
+
     let dbStatus = 'ok';
     let articleSourcesStatus = 'ok';
     let articleCount = 0;

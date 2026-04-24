@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTopPrompts, getPagedPrompts, getAllPromptIds, trackCopy } from '@/lib/services/prompt-service';
 import { parsePaginationParams, parseCountParam, parseSearchQuery, parseCategoryParam } from '@/lib/utils/api-validation';
 
 export const runtime = 'nodejs';
 
 // GET /api/prompts?page=1&pageSize=12&category=1&q=search
 export async function GET(request: NextRequest) {
+    const { getTopPrompts, getPagedPrompts, getAllPromptIds } = await import('@/lib/services/prompt-service');
     const { searchParams } = new URL(request.url);
 
     // 路由: /api/prompts?action=top&count=6
@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/prompts → track-copy
 export async function POST(request: NextRequest) {
+    const { trackCopy } = await import('@/lib/services/prompt-service');
     const body = await request.json();
     const { id, action } = body;
 

@@ -1,5 +1,7 @@
 import { getArticleSitemapEntries } from '@/lib/services/article-service';
 import { getPromptSitemapEntries } from '@/lib/services/prompt-service';
+import { buildAbsoluteUrl, getSiteSeoConfig } from '@/lib/seo/config';
+import { getPromptScenarioPages, getRankingTopicPages } from '@/lib/seo/growth-pages';
 
 export interface SitemapUrlEntry {
     url: string;
@@ -8,7 +10,6 @@ export interface SitemapUrlEntry {
     priority?: number;
 }
 
-const BASE_URL = process.env.SITE_URL || 'https://aigcclub.com.cn';
 const DEFAULT_CHUNK_SIZE = 5000;
 
 export function getSitemapChunkSize(): number {
@@ -33,19 +34,44 @@ function chunkArray<T>(items: T[], chunkSize: number): T[][] {
 }
 
 function buildStaticSitemapEntries(now: string): SitemapUrlEntry[] {
+    if (!getSiteSeoConfig().canIndex) return [];
+
+    const promptScenarioPaths = [
+        '/prompts/scenarios',
+        ...getPromptScenarioPages().map((page) => page.canonicalPath),
+    ];
+    const rankingTopicPaths = [
+        '/rankings/topics',
+        ...getRankingTopicPages().map((page) => page.canonicalPath),
+    ];
+
     return [
-        { url: BASE_URL, lastModified: now, changeFrequency: 'daily', priority: 1.0 },
-        { url: `${BASE_URL}/ai/articles`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
-        { url: `${BASE_URL}/finance/articles`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
-        { url: `${BASE_URL}/prompts`, lastModified: now, changeFrequency: 'daily', priority: 0.8 },
-        { url: `${BASE_URL}/rankings/github`, lastModified: now, changeFrequency: 'daily', priority: 0.6 },
-        { url: `${BASE_URL}/rankings/producthunt`, lastModified: now, changeFrequency: 'daily', priority: 0.6 },
-        { url: `${BASE_URL}/rankings/skills-trending`, lastModified: now, changeFrequency: 'daily', priority: 0.6 },
-        { url: `${BASE_URL}/rankings/skills-hot`, lastModified: now, changeFrequency: 'daily', priority: 0.6 },
+        { url: buildAbsoluteUrl('/'), lastModified: now, changeFrequency: 'daily', priority: 1.0 },
+        { url: buildAbsoluteUrl('/ai/articles'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+        { url: buildAbsoluteUrl('/finance/articles'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+        { url: buildAbsoluteUrl('/prompts'), lastModified: now, changeFrequency: 'daily', priority: 0.8 },
+        { url: buildAbsoluteUrl('/rankings/github'), lastModified: now, changeFrequency: 'daily', priority: 0.6 },
+        { url: buildAbsoluteUrl('/rankings/producthunt'), lastModified: now, changeFrequency: 'daily', priority: 0.6 },
+        { url: buildAbsoluteUrl('/rankings/skills-trending'), lastModified: now, changeFrequency: 'daily', priority: 0.6 },
+        { url: buildAbsoluteUrl('/rankings/skills-hot'), lastModified: now, changeFrequency: 'daily', priority: 0.6 },
+        ...promptScenarioPaths.map((path) => ({
+            url: buildAbsoluteUrl(path),
+            lastModified: now,
+            changeFrequency: 'weekly' as const,
+            priority: path === '/prompts/scenarios' ? 0.7 : 0.6,
+        })),
+        ...rankingTopicPaths.map((path) => ({
+            url: buildAbsoluteUrl(path),
+            lastModified: now,
+            changeFrequency: 'weekly' as const,
+            priority: path === '/rankings/topics' ? 0.7 : 0.6,
+        })),
     ];
 }
 
 export async function listSitemapChunkNames(): Promise<string[]> {
+    if (!getSiteSeoConfig().canIndex) return [];
+
     const [articles, prompts] = await Promise.all([
         getArticleSitemapEntries(),
         getPromptSitemapEntries(),
@@ -63,11 +89,15 @@ export async function listSitemapChunkNames(): Promise<string[]> {
 }
 
 export async function buildSitemapIndexUrls(): Promise<string[]> {
+    if (!getSiteSeoConfig().canIndex) return [];
+
     const names = await listSitemapChunkNames();
-    return names.map((name) => `${BASE_URL}/sitemaps/${name}.xml`);
+    return names.map((name) => buildAbsoluteUrl(`/sitemaps/${name}.xml`));
 }
 
 export async function buildSitemapChunkEntries(chunkName: string): Promise<SitemapUrlEntry[] | null> {
+    if (!getSiteSeoConfig().canIndex) return [];
+
     const now = new Date().toISOString();
 
     if (chunkName === 'static') {
@@ -82,7 +112,7 @@ export async function buildSitemapChunkEntries(chunkName: string): Promise<Sitem
         if (index < 0 || index >= chunks.length) return null;
 
         return chunks[index].map((article) => ({
-            url: `${BASE_URL}${article.path}`,
+            url: buildAbsoluteUrl(article.path),
             lastModified: toIsoOrFallback(article.lastModified, now),
             changeFrequency: 'weekly',
             priority: 0.7,
@@ -97,7 +127,7 @@ export async function buildSitemapChunkEntries(chunkName: string): Promise<Sitem
         if (index < 0 || index >= chunks.length) return null;
 
         return chunks[index].map((prompt) => ({
-            url: `${BASE_URL}/prompts/${prompt.id}`,
+            url: buildAbsoluteUrl(`/prompts/${prompt.id}`),
             lastModified: toIsoOrFallback(prompt.lastModified, now),
             changeFrequency: 'weekly',
             priority: 0.6,
