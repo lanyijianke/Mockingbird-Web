@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryOne, query } from '@/lib/db';
+import { execute, queryOne } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
 export const runtime = 'nodejs';
@@ -41,13 +41,13 @@ export async function POST(request: NextRequest) {
         const passwordHash = await bcrypt.hash(password, 12);
 
         // 更新密码
-        await query(`UPDATE Users SET PasswordHash = ? WHERE Id = ?`, [
+        await execute(`UPDATE Users SET PasswordHash = ? WHERE Id = ?`, [
             passwordHash,
             resetToken.UserId,
         ]);
 
         // 删除已使用的 token
-        await query(`DELETE FROM PasswordResetTokens WHERE Id = ?`, [resetToken.Id]);
+        await execute(`DELETE FROM PasswordResetTokens WHERE Id = ?`, [resetToken.Id]);
 
         return NextResponse.json({
             success: true,

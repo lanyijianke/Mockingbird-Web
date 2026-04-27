@@ -25,8 +25,11 @@ describe('article ingestion removal', () => {
     it('removes console API and transmuter-workshop leftovers from prompt ingestion', () => {
         expect(fs.existsSync(path.join(webRoot, 'lib/utils/console-client.ts'))).toBe(false);
 
-        const readmeSource = fs.readFileSync(path.join(webRoot, 'README.md'), 'utf-8');
         const gitignoreSource = fs.readFileSync(path.join(webRoot, '.gitignore'), 'utf-8');
+        const readmePath = path.join(webRoot, 'README.md');
+        const readmeSource = fs.existsSync(readmePath)
+            ? fs.readFileSync(readmePath, 'utf-8')
+            : '';
 
         expect(fs.existsSync(path.join(webRoot, 'lib/pipelines/prompt-csv-ingestion.ts'))).toBe(false);
         expect(readmeSource).not.toContain('CONSOLE_API_BASE_URL');

@@ -108,6 +108,7 @@ export function initDatabase(db: Database.Database): void {
             PasswordHash    TEXT    DEFAULT NULL,
             AvatarUrl       TEXT    DEFAULT NULL,
             Role            TEXT    NOT NULL DEFAULT 'user',
+            MembershipExpiresAt TEXT DEFAULT NULL,
             EmailVerifiedAt TEXT    DEFAULT NULL,
             CreatedAt       TEXT    DEFAULT (datetime('now')),
             UpdatedAt       TEXT    DEFAULT NULL
@@ -160,18 +161,28 @@ export function initDatabase(db: Database.Database): void {
         CREATE INDEX IF NOT EXISTS idx_pwdreset_token ON PasswordResetTokens(Token);
     `);
 
+    ensureColumn(db, 'Users', 'MembershipExpiresAt', 'TEXT DEFAULT NULL');
+
+    db.exec(`
+        UPDATE Users
+        SET Role = 'junior_member'
+        WHERE Role = 'member'
+    `);
+
     // ════════════════════════════════════════════════════════════════
     // 会员邀请
     // ════════════════════════════════════════════════════════════════
 
     db.exec(`
         CREATE TABLE IF NOT EXISTS InvitationCodes (
-            Id        INTEGER PRIMARY KEY AUTOINCREMENT,
-            Code      TEXT    NOT NULL UNIQUE,
-            MaxUses   INTEGER NOT NULL DEFAULT 1,
-            UsedCount INTEGER NOT NULL DEFAULT 0,
-            ExpiresAt TEXT    NOT NULL,
-            CreatedAt TEXT    DEFAULT (datetime('now'))
+            Id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            Code       TEXT    NOT NULL UNIQUE,
+            TargetRole TEXT    NOT NULL DEFAULT 'junior_member',
+            MembershipDurationDays INTEGER NOT NULL DEFAULT 30,
+            MaxUses    INTEGER NOT NULL DEFAULT 1,
+            UsedCount  INTEGER NOT NULL DEFAULT 0,
+            ExpiresAt  TEXT    NOT NULL,
+            CreatedAt  TEXT    DEFAULT (datetime('now'))
         );
 
         CREATE INDEX IF NOT EXISTS idx_invite_code ON InvitationCodes(Code);
@@ -185,6 +196,25 @@ export function initDatabase(db: Database.Database): void {
         );
 
         CREATE INDEX IF NOT EXISTS idx_redemption_user ON InvitationRedemptions(UserId);
+    `);
+
+    ensureColumn(db, 'InvitationCodes', 'TargetRole', `TEXT NOT NULL DEFAULT 'junior_member'`);
+    ensureColumn(db, 'InvitationCodes', 'MembershipDurationDays', 'INTEGER NOT NULL DEFAULT 30');
+
+    db.exec(`
+        UPDATE InvitationCodes
+        SET TargetRole = 'junior_member'
+        WHERE TargetRole IS NULL OR trim(TargetRole) = '' OR TargetRole = 'member'
+    `);
+
+    db.exec(`
+        UPDATE InvitationCodes
+        SET MembershipDurationDays = CASE
+            WHEN TargetRole = 'founder_member' THEN ${999 * 365}
+            WHEN TargetRole = 'senior_member' THEN 365
+            ELSE 30
+        END
+        WHERE MembershipDurationDays IS NULL OR MembershipDurationDays <= 0
     `);
 
     // ════════════════════════════════════════════════════════════════

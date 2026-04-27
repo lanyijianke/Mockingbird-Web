@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { GetSessionToken } from '@/app/api/auth/helpers';
 import { GetSession } from '@/lib/auth/session';
 import { queryOne } from '@/lib/db';
+import { getEffectiveRole } from '@/lib/auth/roles';
 
 // ════════════════════════════════════════════════════════════════
 // 角色守卫 — 用于需要特定角色的 API 路由
@@ -10,6 +11,7 @@ import { queryOne } from '@/lib/db';
 interface UserProfile {
     Id: string;
     Role: string;
+    MembershipExpiresAt: string | null;
 }
 
 interface RoleCheckResult {
@@ -42,7 +44,7 @@ export async function RequireRole(
     }
 
     const user = await queryOne<UserProfile>(
-        `SELECT Id, Role FROM Users WHERE Id = ?`,
+        `SELECT Id, Role, MembershipExpiresAt FROM Users WHERE Id = ?`,
         [session.UserId],
     );
 
@@ -53,12 +55,14 @@ export async function RequireRole(
         });
     }
 
-    if (!allowedRoles.includes(user.Role)) {
+    const effectiveRole = getEffectiveRole(user.Role, user.MembershipExpiresAt);
+
+    if (!allowedRoles.includes(effectiveRole)) {
         return new Response(JSON.stringify({ error: '权限不足' }), {
             status: 403,
             headers: { 'Content-Type': 'application/json' },
         });
     }
 
-    return { userId: user.Id, role: user.Role };
+    return { userId: user.Id, role: effectiveRole };
 }

@@ -2,6 +2,9 @@
 
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
+import { getSiteBrandConfig } from '@/lib/site-config';
+
+const SITE_BRAND = getSiteBrandConfig();
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -73,7 +76,7 @@ export default function RegisterPage() {
     <div className="auth-page">
       <div className="auth-card">
         <h1 className="auth-title">注册</h1>
-        <p className="auth-subtitle">加入知更鸟知识平台</p>
+        <p className="auth-subtitle">加入 {SITE_BRAND.siteName}</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {error && <div className="auth-error">{error}</div>}

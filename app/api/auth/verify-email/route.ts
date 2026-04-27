@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryOne, query } from '@/lib/db';
+import { execute, queryOne } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -33,13 +33,13 @@ export async function POST(request: NextRequest) {
         }
 
         // 更新用户邮箱验证时间
-        await query(
+        await execute(
             `UPDATE Users SET EmailVerifiedAt = datetime('now') WHERE Id = ?`,
             [verification.UserId],
         );
 
         // 删除已使用的 token
-        await query(`DELETE FROM EmailVerificationTokens WHERE Id = ?`, [verification.Id]);
+        await execute(`DELETE FROM EmailVerificationTokens WHERE Id = ?`, [verification.Id]);
 
         return NextResponse.json({
             success: true,

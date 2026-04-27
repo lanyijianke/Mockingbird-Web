@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import TopNavMobileRankingsMenu from '@/app/TopNavMobileRankingsMenu';
+import NavAuthButton from '@/app/NavAuthButton';
 import { getArticleListPath } from '@/lib/articles/article-route-paths';
-import { buildAbsoluteUrl } from '@/lib/seo/config';
+import { buildAbsoluteUrl, getSiteSeoConfig } from '@/lib/seo/config';
 import { buildRootMetadata } from '@/lib/seo/metadata';
 import { buildWebSiteJsonLd, JsonLdScript } from '@/lib/seo/schema';
 import './globals.css';
@@ -14,6 +14,8 @@ import './globals.css';
 export const runtime = 'nodejs';
 export const metadata = buildRootMetadata();
 const SITE_HOST = new URL(buildAbsoluteUrl('/')).host;
+const SITE_CONFIG = getSiteSeoConfig();
+const CURRENT_YEAR = new Date().getFullYear();
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -29,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="nav-center">
             <div className="nav-divider" />
             <div className="nav-brand-name">
-              <Link href="/">知更鸟</Link>
+              <Link href="/">{SITE_CONFIG.brandName}</Link>
             </div>
             <div className="nav-divider" />
           </div>
@@ -39,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href={getArticleListPath('ai')} className="nav-link">AI文章</Link>
             <Link href={getArticleListPath('finance')} className="nav-link">金融文章</Link>
             <Link href="/prompts" className="nav-link">提示词</Link>
-            <TopNavMobileRankingsMenu />
+            <Link href="/rankings/topics" className="nav-link nav-mobile-only">热榜</Link>
 
             {/* ═══ 热榜 — 父子菜单 ═══ */}
             <div className="nav-dropdown nav-desktop-only">
@@ -65,6 +67,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </Link>
               </div>
             </div>
+
+            <Link href="/academy" className="nav-link">学社</Link>
+            <NavAuthButton />
           </div>
         </nav>
 
@@ -77,14 +82,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* ═══ Footer ═══ */}
         <footer className="site-footer">
-          <div>© 2026 知更鸟知识库 · Mockingbird Knowledge · {SITE_HOST}</div>
+          <div>© {CURRENT_YEAR} {SITE_CONFIG.siteName} · {SITE_CONFIG.alternateName} · {SITE_HOST}</div>
           <a
-            href="https://beian.miit.gov.cn/"
+            href={SITE_CONFIG.icpUrl}
             target="_blank"
             rel="noopener noreferrer nofollow"
             className="site-footer-icp"
           >
-            冀ICP备2024081438号
+            {SITE_CONFIG.icpNumber}
           </a>
         </footer>
 

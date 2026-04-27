@@ -146,13 +146,13 @@ export function buildRootMetadata(): Metadata {
             locale: config.openGraph.locale,
             type: config.openGraph.type,
             url: buildAbsoluteUrl('/'),
-            title: '知更鸟知识库 - 泛 AI 知识平台',
-            description: '深度文章、提示词精选与实时热榜，助你立于 AI 前沿',
+            title: config.homeTitle,
+            description: config.homeDescription,
         },
         twitter: {
             card: config.twitter.card,
-            title: '知更鸟知识库',
-            description: '深度文章、提示词精选与实时热榜，助你立于 AI 前沿',
+            title: config.siteName,
+            description: config.homeDescription,
         },
         alternates: {
             canonical: '/',
@@ -162,9 +162,11 @@ export function buildRootMetadata(): Metadata {
 }
 
 export function buildHomePageMetadata(): Metadata {
+    const config = getSiteSeoConfig();
+
     return buildWebsiteMetadata({
-        title: '知更鸟知识库 - 泛 AI 知识平台',
-        description: '深度文章、提示词精选与实时热榜，助你立于 AI 前沿',
+        title: config.homeTitle,
+        description: config.homeDescription,
         canonicalPath: '/',
         robots: buildIndexableRobots(),
     });
@@ -215,8 +217,10 @@ export function buildPromptDetailMetadata(input: PromptDetailMetadataInput): Met
 }
 
 export function buildRankingsLayoutMetadata(): Metadata {
+    const { siteName } = getSiteSeoConfig();
+
     return {
-        title: '排行榜 — 知更鸟知识库',
+        title: `排行榜 — ${siteName}`,
         description: '查看 GitHub Trending、ProductHunt 热榜、Skills.sh 排行',
     };
 }
@@ -245,8 +249,9 @@ function buildCategoryLandingMetadata(input: {
 }
 
 export function buildArticleCategoryLandingMetadata(input: CategoryLandingMetadataInput): Metadata {
-    const title = input.title || `${input.categoryName}文章 - 知更鸟知识库`;
-    const description = input.description || `聚合知更鸟知识库内与 ${input.categoryName} 相关的精选文章、教程与实践案例。`;
+    const { siteName } = getSiteSeoConfig();
+    const title = input.title || `${input.categoryName}文章 - ${siteName}`;
+    const description = input.description || `聚合${siteName}内与 ${input.categoryName} 相关的精选文章、教程与实践案例。`;
     const keywords = Array.isArray(input.keywords)
         ? input.keywords
         : input.keywords
@@ -263,8 +268,9 @@ export function buildArticleCategoryLandingMetadata(input: CategoryLandingMetada
 }
 
 export function buildPromptCategoryLandingMetadata(input: CategoryLandingMetadataInput): Metadata {
-    const title = input.title || `${input.categoryName}提示词 - 知更鸟知识库`;
-    const description = input.description || `探索知更鸟知识库内与 ${input.categoryName} 相关的高质量提示词、示例与创作灵感。`;
+    const { siteName } = getSiteSeoConfig();
+    const title = input.title || `${input.categoryName}提示词 - ${siteName}`;
+    const description = input.description || `探索${siteName}内与 ${input.categoryName} 相关的高质量提示词、示例与创作灵感。`;
     const keywords = Array.isArray(input.keywords)
         ? input.keywords
         : input.keywords

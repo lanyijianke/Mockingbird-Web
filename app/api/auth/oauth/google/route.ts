@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HandleOAuthLogin, SetSessionCookie } from '@/app/api/auth/helpers';
+import { buildAbsoluteUrl } from '@/lib/seo/config';
 
 export const runtime = 'nodejs';
 
@@ -7,8 +8,9 @@ export const runtime = 'nodejs';
 // GET /api/auth/oauth/google — Google OAuth 回调
 // ════════════════════════════════════════════════════════════════
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_CLIENT_ID = process.env.OAUTH_GOOGLE_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.OAUTH_GOOGLE_SECRET || '';
+const GOOGLE_REDIRECT_URI = buildAbsoluteUrl('/api/auth/oauth/google');
 
 export async function GET(request: NextRequest) {
     try {
@@ -16,7 +18,18 @@ export async function GET(request: NextRequest) {
         const code = searchParams.get('code');
 
         if (!code) {
-            return NextResponse.redirect(new URL('/login?error=oauth_denied', request.url));
+            if (!GOOGLE_CLIENT_ID) {
+                return NextResponse.redirect(new URL('/login?error=oauth_unconfigured', request.url));
+            }
+
+            const authorizeUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+            authorizeUrl.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+            authorizeUrl.searchParams.set('redirect_uri', GOOGLE_REDIRECT_URI);
+            authorizeUrl.searchParams.set('response_type', 'code');
+            authorizeUrl.searchParams.set('scope', 'openid email profile');
+            authorizeUrl.searchParams.set('access_type', 'offline');
+            authorizeUrl.searchParams.set('prompt', 'consent');
+            return NextResponse.redirect(authorizeUrl);
         }
 
         // 1) 用 code 换 token
@@ -27,7 +40,7 @@ export async function GET(request: NextRequest) {
                 code,
                 client_id: GOOGLE_CLIENT_ID,
                 client_secret: GOOGLE_CLIENT_SECRET,
-                redirect_uri: `${process.env.SITE_URL || 'http://localhost:5046'}/api/auth/oauth/google`,
+                redirect_uri: GOOGLE_REDIRECT_URI,
                 grant_type: 'authorization_code',
             }),
         });

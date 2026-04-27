@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import { getSiteSeoConfig } from '@/lib/seo/config';
 
 export const runtime = 'nodejs';
 
 // GET /api/health — 增强版健康检查
 export async function GET() {
+    const siteConfig = getSiteSeoConfig();
     const [{ queryScalar }, { getTotalCount: getArticleCount }, { getSchedulerStatus }] = await Promise.all([
         import('@/lib/db'),
         import('@/lib/services/article-service'),
@@ -35,7 +37,7 @@ export async function GET() {
 
     return NextResponse.json({
         status: dbStatus === 'ok' && articleSourcesStatus === 'ok' ? 'healthy' : 'degraded',
-        service: 'Mockingbird Knowledge Web',
+        service: siteConfig.serviceName,
         timestamp: new Date().toISOString(),
         version: process.env.npm_package_version || '0.1.0',
         database: {

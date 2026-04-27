@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // ════════════════════════════════════════════════════════════════
 // Middleware — 路由保护
-// 公开前缀下的路径直接放行，其余路径需要登录
+// 只保护明确的私有页面，公开内容页默认放行
 // /api/ 路径全部放行（由各路由自行处理鉴权）
 // ════════════════════════════════════════════════════════════════
 
@@ -17,10 +17,13 @@ const PUBLIC_PREFIXES = [
     '/favicon',
 ];
 
-const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
+const GUEST_ONLY_PATHS = ['/login', '/register'];
+const SHARED_AUTH_PATHS = ['/forgot-password', '/reset-password', '/verify-email'];
+const PROTECTED_PREFIXES = ['/profile', '/membership', '/academy'];
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
+    const sessionToken = request.cookies.get('session_token')?.value;
 
     // 公开前缀直接放行
     if (PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix) || pathname === prefix.slice(0, -1))) {
@@ -35,24 +38,24 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // 检查是否有 session cookie
-    const sessionToken = request.cookies.get('session_token')?.value;
-
-    if (!sessionToken) {
-        // 未登录 — 如果已经在登录相关页面，放行
-        if (AUTH_PATHS.some((p) => pathname.startsWith(p))) {
-            return NextResponse.next();
+    // 登录/注册页面：已登录用户回首页，未登录用户放行
+    if (GUEST_ONLY_PATHS.some((p) => pathname.startsWith(p))) {
+        if (sessionToken) {
+            return NextResponse.redirect(new URL('/', request.url));
         }
+        return NextResponse.next();
+    }
 
-        // 其他页面跳转到登录页，带上回调地址
+    // 忘记密码 / 重置密码 / 验证邮箱：已登录和未登录都允许访问
+    if (SHARED_AUTH_PATHS.some((p) => pathname.startsWith(p))) {
+        return NextResponse.next();
+    }
+
+    // 仅私有页面需要登录
+    if (!sessionToken && PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('callbackUrl', pathname);
         return NextResponse.redirect(loginUrl);
-    }
-
-    // 已登录 — 如果在登录/注册页面，跳转到首页
-    if (AUTH_PATHS.some((p) => pathname.startsWith(p))) {
-        return NextResponse.redirect(new URL('/', request.url));
     }
 
     return NextResponse.next();

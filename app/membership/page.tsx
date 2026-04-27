@@ -3,17 +3,22 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getSiteBrandConfig } from '@/lib/site-config';
+import { hasAcademyAccess } from '@/lib/auth/roles';
+
+const SITE_BRAND = getSiteBrandConfig();
 
 interface UserInfo {
   id: string;
   name: string;
   email: string;
   role: string;
+  membershipExpiresAt?: string | null;
 }
 
 export default function MembershipPage() {
   const router = useRouter();
-  const [user, setUser] = useState<UserInfo | null>(null);
+  const [, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -25,14 +30,18 @@ export default function MembershipPage() {
       try {
         const res = await fetch('/api/auth/me');
         if (!res.ok) {
+          throw new Error('failed to fetch current user');
+        }
+        const data = await res.json();
+        const nextUser: UserInfo | null = data.user ?? null;
+        if (!nextUser) {
           router.push('/login?callbackUrl=/membership');
           return;
         }
-        const data = await res.json();
-        setUser(data.user || data);
+        setUser(nextUser);
 
-        // Already member/admin -> redirect to academy
-        if ((data.user || data).role === 'member' || (data.user || data).role === 'admin') {
+        // Already has academy access -> redirect to academy
+        if (hasAcademyAccess(nextUser.role, nextUser.membershipExpiresAt)) {
           router.push('/academy');
           return;
         }
@@ -94,7 +103,7 @@ export default function MembershipPage() {
       <div className="membership-page">
         <div className="membership-card">
           <div className="membership-success" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
-            欢迎加入知更鸟学社
+            欢迎加入{SITE_BRAND.academyName}
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
             你已成功成为学社成员，可以访问所有学社内容。
@@ -114,7 +123,7 @@ export default function MembershipPage() {
   return (
     <div className="membership-page">
       <div className="membership-card">
-        <h1 className="membership-heading">加入知更鸟学社</h1>
+        <h1 className="membership-heading">加入{SITE_BRAND.academyName}</h1>
         <p className="membership-desc">
           输入邀请码，解锁学社会员专属内容。
         </p>

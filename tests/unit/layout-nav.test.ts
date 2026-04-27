@@ -16,19 +16,21 @@ describe('root layout navigation', () => {
         expect(navRightMatch?.[1]).toContain('href="/"');
     });
 
-    it('renders a dedicated mobile rankings trigger while keeping desktop dropdown links', () => {
+    it('renders a mobile rankings hub link, desktop dropdown links, and an always-visible academy link', () => {
         const html = renderToStaticMarkup(
             RootLayout({
                 children: createElement('div', null, 'test page'),
             })
         );
 
-        expect(html).toContain('nav-mobile-rankings');
+        expect(html).toContain('href="/academy"');
+        expect(html).toContain('>学社<');
+        expect(html).toContain('href="/rankings/topics"');
+        expect(html).toContain('nav-mobile-only');
         expect(html).toContain('热榜');
         expect(html).toContain('href="/rankings/producthunt"');
         expect(html).toContain('href="/rankings/skills-trending"');
         expect(html).toContain('href="/rankings/skills-hot"');
-        expect(html).not.toContain('href="/rankings/topics"');
         expect(html).toContain('nav-desktop-only');
     });
 });

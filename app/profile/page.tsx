@@ -3,6 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getSiteBrandConfig } from '@/lib/site-config';
+import {
+  getMembershipExpiryTimestamp,
+  hasAcademyAccess,
+  isExpiredMembership,
+  isMembershipRole,
+} from '@/lib/auth/roles';
+import { formatUtcStorageDateTimeBeijing } from '@/lib/utils/time-utils';
+
+const SITE_BRAND = getSiteBrandConfig();
 
 interface UserInfo {
   id: string;
@@ -14,11 +24,14 @@ interface UserInfo {
   createdAt?: string;
   hasPassword?: boolean;
   oauthProviders?: string[];
+  membershipExpiresAt?: string | null;
 }
 
 const ROLE_LABELS: Record<string, { label: string; className: string }> = {
   admin: { label: '管理员', className: 'profile-badge-role-admin' },
-  member: { label: '学社会员', className: 'profile-badge-role-member' },
+  junior_member: { label: '普通会员', className: 'profile-badge-role-member' },
+  senior_member: { label: '高级会员', className: 'profile-badge-role-member' },
+  founder_member: { label: '创始会员', className: 'profile-badge-role-member' },
   user: { label: '普通用户', className: 'profile-badge-role-user' },
 };
 
@@ -32,11 +45,15 @@ export default function ProfilePage() {
       try {
         const res = await fetch('/api/auth/me');
         if (!res.ok) {
+          throw new Error('failed to fetch current user');
+        }
+        const data = await res.json();
+        const nextUser: UserInfo | null = data.user ?? null;
+        if (!nextUser) {
           router.push('/login?callbackUrl=/profile');
           return;
         }
-        const data = await res.json();
-        setUser(data.user || data);
+        setUser(nextUser);
       } catch {
         router.push('/login?callbackUrl=/profile');
       } finally {
@@ -60,6 +77,9 @@ export default function ProfilePage() {
   }
 
   const roleInfo = ROLE_LABELS[user.role] || ROLE_LABELS.user;
+  const canEnterAcademy = hasAcademyAccess(user.role, user.membershipExpiresAt);
+  const canRedeemMembership = user.role === 'user' || isExpiredMembership(user.role, user.membershipExpiresAt);
+  const membershipExpiryTimestamp = getMembershipExpiryTimestamp(user.membershipExpiresAt);
 
   // Collect login method tags
   const loginMethods: { label: string; icon: string; tagClass?: string }[] = [];
@@ -113,6 +133,15 @@ export default function ProfilePage() {
             </span>
           </div>
 
+          {isMembershipRole(user.role) && membershipExpiryTimestamp !== null && (
+            <div className="profile-info-row">
+              <span className="profile-info-label">到期时间</span>
+              <span className="profile-info-value">
+                {formatUtcStorageDateTimeBeijing(user.membershipExpiresAt)}
+              </span>
+            </div>
+          )}
+
           <div className="profile-info-row">
             <span className="profile-info-label">邮箱验证</span>
             <span className="profile-info-value">
@@ -154,15 +183,15 @@ export default function ProfilePage() {
 
         {/* Quick Actions */}
         <div className="profile-actions">
-          {(user.role === 'member' || user.role === 'admin') && (
+          {canEnterAcademy && (
             <Link href="/academy" className="profile-action-link">
               <i className="bi bi-mortarboard" /> 进入学社
             </Link>
           )}
 
-          {user.role === 'user' && (
+          {canRedeemMembership && (
             <Link href="/membership" className="profile-action-link">
-              <i className="bi bi-key" /> 加入知更鸟学社
+              <i className="bi bi-key" /> 加入{SITE_BRAND.academyName}
             </Link>
           )}
 

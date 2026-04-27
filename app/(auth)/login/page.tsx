@@ -3,6 +3,9 @@
 import { Suspense, useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getSiteBrandConfig } from '@/lib/site-config';
+
+const SITE_BRAND = getSiteBrandConfig();
 
 function LoginForm() {
   const router = useRouter();
@@ -46,7 +49,7 @@ function LoginForm() {
     <div className="auth-page">
       <div className="auth-card">
         <h1 className="auth-title">登录</h1>
-        <p className="auth-subtitle">欢迎回到知更鸟</p>
+        <p className="auth-subtitle">欢迎回到 {SITE_BRAND.brandName}</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           {error && <div className="auth-error">{error}</div>}

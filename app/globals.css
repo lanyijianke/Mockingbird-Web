@@ -1,5 +1,5 @@
 /* ════════════════════════════════════════════════════════════════
-   知更鸟 Knowledge — Global Design System
+   Global Design System
    Every.to Editorial Magazine Style: Serif + Pure Black
    ════════════════════════════════════════════════════════════════ */
 
@@ -135,7 +135,7 @@ h3:focus-visible {
   display: block;
 }
 
-.nav-mobile-rankings {
+.nav-mobile-only {
   display: none;
 }
 
@@ -2333,50 +2333,9 @@ h3:focus-visible {
     display: none;
   }
 
-  .nav-mobile-rankings {
-    position: relative;
-    display: block;
-    flex: 0 0 auto;
-  }
-
-  .nav-mobile-rankings-trigger {
+  .nav-mobile-only {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.3rem;
-    min-height: 44px;
-    background: none;
-    border: none;
-    padding: 0 0.35rem;
-    cursor: pointer;
-    touch-action: manipulation;
-  }
-
-  .nav-mobile-rankings-menu {
-    position: fixed;
-    top: calc(var(--nav-height) + 0.35rem);
-    right: 0.75rem;
-    min-width: 200px;
-    max-width: calc(100vw - 1.5rem);
-    background: rgba(18, 18, 22, 0.98);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-top: 2px solid var(--accent-main, #e8c872);
-    border-radius: 10px;
-    padding: 0.5rem;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-6px);
-    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
-    z-index: 1100;
-  }
-
-  .nav-mobile-rankings[data-open='true'] .nav-mobile-rankings-menu {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
   }
 
   .nav-dropdown-arrow {

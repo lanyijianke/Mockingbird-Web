@@ -16,16 +16,14 @@ describe('mobile navigation layout', () => {
         expect(mobileNavBlock?.[0]).toContain('overflow-x: auto;');
         expect(mobileNavBlock?.[0]).toContain('.nav-right');
         expect(mobileNavBlock?.[0]).toContain('white-space: nowrap;');
-        expect(mobileNavBlock?.[0]).toContain('.nav-mobile-rankings-menu');
-        expect(mobileNavBlock?.[0]).toContain('position: fixed;');
+        expect(mobileNavBlock?.[0]).toContain('.nav-mobile-only');
+        expect(mobileNavBlock?.[0]).not.toContain('.nav-mobile-rankings-menu');
     });
 
-    it('gives the mobile rankings trigger a reliable touch target', () => {
+    it('keeps the mobile-only nav utility visible without the old trigger styles', () => {
         const css = fs.readFileSync(globalsCssPath, 'utf-8');
-        const triggerBlock = css.match(/\.nav-mobile-rankings-trigger\s*\{[\s\S]*?\}/);
+        const navMobileOnlyBlock = css.match(/\.nav-mobile-only\s*\{[\s\S]*?\}/);
 
-        expect(triggerBlock?.[0]).toContain('min-height: 44px;');
-        expect(triggerBlock?.[0]).toContain('padding: 0 0.35rem;');
-        expect(triggerBlock?.[0]).toContain('touch-action: manipulation;');
+        expect(navMobileOnlyBlock?.[0]).toContain('display: none;');
     });
 });

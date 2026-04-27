@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { query, queryOne } from '@/lib/db';
+import { execute, queryOne } from '@/lib/db';
 
 // ════════════════════════════════════════════════════════════════
 // Session 管理 — token 存 HttpOnly cookie，DB 存映射
@@ -25,7 +25,7 @@ export async function CreateSession(userId: string): Promise<string> {
         .replace('T', ' ')
         .replace(/\.\d{3}Z$/, '');
 
-    await query(
+    await execute(
         `INSERT INTO Sessions (Token, UserId, ExpiresAt) VALUES (?, ?, ?)`,
         [token, userId, expiresAt],
     );
@@ -54,5 +54,5 @@ export async function GetSession(token: string): Promise<SessionRow | null> {
  */
 export async function DeleteSession(token: string): Promise<void> {
     if (!token) return;
-    await query(`DELETE FROM Sessions WHERE Token = ?`, [token]);
+    await execute(`DELETE FROM Sessions WHERE Token = ?`, [token]);
 }

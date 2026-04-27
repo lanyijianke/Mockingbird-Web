@@ -134,6 +134,11 @@ describe('ranking topic page family', () => {
         expect(layoutHtml).toContain('/rankings/skills-trending');
         expect(layoutHtml).toContain('/rankings/skills-hot');
         expect(layoutHtml).not.toContain('/rankings/topics');
+        expect(indexHtml).toContain('榜单入口');
+        expect(indexHtml).toContain('/rankings/github');
+        expect(indexHtml).toContain('/rankings/producthunt');
+        expect(indexHtml).toContain('/rankings/skills-trending');
+        expect(indexHtml).toContain('/rankings/skills-hot');
         expect(indexHtml).toContain('AI 新品发布观察');
         expect(indexHtml).toContain('/rankings/topics/ai-launches-producthunt');
     });

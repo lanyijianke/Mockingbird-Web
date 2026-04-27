@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RequireRole } from '@/lib/auth/require-role';
 import { query } from '@/lib/db';
+import { ACADEMY_ALLOWED_ROLES } from '@/lib/auth/roles';
 
 export const runtime = 'nodejs';
 
 // ════════════════════════════════════════════════════════════════
-// GET /api/academy/content — 获取学院内容列表（需 member 或 admin）
+// GET /api/academy/content — 获取学院内容列表（需 junior_member+ 或 admin）
 // ════════════════════════════════════════════════════════════════
 
 interface ContentRow {
@@ -20,7 +21,7 @@ interface ContentRow {
 
 export async function GET(request: NextRequest) {
     try {
-        const authResult = await RequireRole(request, ['member', 'admin']);
+        const authResult = await RequireRole(request, ACADEMY_ALLOWED_ROLES);
         if (authResult instanceof Response) return authResult;
 
         const contents = await query<ContentRow>(

@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { getSiteBrandConfig } from '@/lib/site-config';
+import { hasAcademyAccess, isExpiredMembership } from '@/lib/auth/roles';
+
+const SITE_BRAND = getSiteBrandConfig();
 
 interface UserInfo {
   id: string;
@@ -10,9 +15,11 @@ interface UserInfo {
   role: string;
   avatarUrl?: string;
   hasPassword?: boolean;
+  membershipExpiresAt?: string | null;
 }
 
 export default function NavAuthButton() {
+  const pathname = usePathname();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -21,12 +28,14 @@ export default function NavAuthButton() {
 
   useEffect(() => {
     async function fetchUser() {
+      setLoading(true);
       try {
         const res = await fetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data.user || data);
+        if (!res.ok) {
+          return;
         }
+        const data = await res.json();
+        setUser(data.user ?? null);
       } catch {
         // Not logged in
       } finally {
@@ -35,7 +44,7 @@ export default function NavAuthButton() {
     }
 
     fetchUser();
-  }, []);
+  }, [pathname]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -80,7 +89,8 @@ export default function NavAuthButton() {
   }
 
   // Logged in
-  const isMemberOrAdmin = user.role === 'member' || user.role === 'admin';
+  const canEnterAcademy = hasAcademyAccess(user.role, user.membershipExpiresAt);
+  const canRedeemMembership = user.role === 'user' || isExpiredMembership(user.role, user.membershipExpiresAt);
 
   return (
     <div className="nav-auth" ref={wrapperRef} data-open={open ? 'true' : 'false'}>
@@ -116,13 +126,23 @@ export default function NavAuthButton() {
             <i className="bi bi-person" /> 个人中心
           </Link>
 
-          {isMemberOrAdmin && (
+          {canEnterAcademy && (
             <Link
               href="/academy"
               className="nav-auth-dropdown-item"
               onClick={() => setOpen(false)}
             >
-              <i className="bi bi-mortarboard" /> 知更鸟学社
+              <i className="bi bi-mortarboard" /> {SITE_BRAND.academyName}
+            </Link>
+          )}
+
+          {canRedeemMembership && (
+            <Link
+              href="/membership"
+              className="nav-auth-dropdown-item"
+              onClick={() => setOpen(false)}
+            >
+              <i className="bi bi-key" /> 会员兑换
             </Link>
           )}
 

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from '@/lib/db';
-import { SetSessionCookie } from '@/app/api/auth/helpers';
-import { CreateSession } from '@/lib/auth/session';
+import { execute, queryOne } from '@/lib/db';
 import { sendVerificationEmail } from '@/lib/email/send';
 import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
@@ -50,7 +48,7 @@ export async function POST(request: NextRequest) {
         const passwordHash = await bcrypt.hash(password, 12);
 
         // 插入用户
-        await query(
+        await execute(
             `INSERT INTO Users (Name, Email, PasswordHash, Role) VALUES (?, ?, ?, 'user')`,
             [trimmedName, trimmedEmail, passwordHash],
         );
@@ -71,7 +69,7 @@ export async function POST(request: NextRequest) {
             .replace('T', ' ')
             .replace(/\.\d{3}Z$/, '');
 
-        await query(
+        await execute(
             `INSERT INTO EmailVerificationTokens (Token, UserId, ExpiresAt) VALUES (?, ?, ?)`,
             [verifyToken, user.Id, verifyExpires],
         );
@@ -85,20 +83,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 创建会话
-        const sessionToken = await CreateSession(user.Id);
-
-        return NextResponse.json(
-            {
-                success: true,
-                message: '注册成功，验证邮件已发送',
-                user: { id: user.Id, email: trimmedEmail, name: trimmedName },
-            },
-            {
-                status: 201,
-                headers: { 'Set-Cookie': SetSessionCookie(sessionToken) },
-            },
-        );
+        return NextResponse.json({
+            success: true,
+            message: '注册成功，请先验证邮箱',
+            user: { id: user.Id, email: trimmedEmail, name: trimmedName },
+        }, { status: 201 });
     } catch (err) {
         console.error('[Register] Error:', err);
         return NextResponse.json({ error: '注册失败，请稍后重试' }, { status: 500 });

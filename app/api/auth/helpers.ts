@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { query, queryOne } from '@/lib/db';
+import { execute, queryOne } from '@/lib/db';
 import { CreateSession } from '@/lib/auth/session';
 
 // ════════════════════════════════════════════════════════════════
@@ -75,7 +75,7 @@ export async function HandleOAuthLogin(
         // 已绑定 — 更新用户头像（如果提供了新的）
         userId = existing.UserId;
         if (avatarUrl) {
-            await query(`UPDATE Users SET AvatarUrl = ? WHERE Id = ? AND (AvatarUrl IS NULL OR AvatarUrl = '')`, [
+            await execute(`UPDATE Users SET AvatarUrl = ? WHERE Id = ? AND (AvatarUrl IS NULL OR AvatarUrl = '')`, [
                 avatarUrl,
                 userId,
             ]);
@@ -85,19 +85,17 @@ export async function HandleOAuthLogin(
         let user = await queryOne<{ Id: string }>(`SELECT Id FROM Users WHERE Email = ?`, [email]);
 
         if (!user) {
-            const result = await query(
+            await execute(
                 `INSERT INTO Users (Name, Email, Role) VALUES (?, ?, 'user')`,
                 [name, email],
             );
-            // better-sqlite3 通过 getDb().prepare().run() 返回 lastInsertRowid
-            // 但 query() 返回的是 stmt.all()，所以用 queryOne 再查
             user = await queryOne<{ Id: string }>(`SELECT Id FROM Users WHERE Email = ?`, [email]);
         }
 
         userId = user!.Id;
 
         // 建立 OAuth 绑定
-        await query(
+        await execute(
             `INSERT INTO OauthAccounts (Provider, ProviderAccountId, UserId) VALUES (?, ?, ?)`,
             [provider, providerAccountId, userId],
         );

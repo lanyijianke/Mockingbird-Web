@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query, queryOne } from '@/lib/db';
 import { GetSessionToken, ClearSessionCookie } from '@/app/api/auth/helpers';
 import { GetSession } from '@/lib/auth/session';
+import { getEffectiveRole } from '@/lib/auth/roles';
 
 export const runtime = 'nodejs';
 
@@ -14,6 +15,7 @@ interface UserRow {
     Email: string;
     Name: string;
     Role: string;
+    MembershipExpiresAt: string | null;
     AvatarUrl: string | null;
     PasswordHash: string | null;
     EmailVerifiedAt: string | null;
@@ -27,32 +29,31 @@ export async function GET(request: NextRequest) {
     try {
         const token = GetSessionToken(request);
         if (!token) {
-            return NextResponse.json(
-                { error: '未登录' },
-                { status: 401, headers: { 'Set-Cookie': ClearSessionCookie() } },
-            );
+            return NextResponse.json({ user: null });
         }
 
         const session = await GetSession(token);
         if (!session) {
             return NextResponse.json(
-                { error: '会话已过期' },
-                { status: 401, headers: { 'Set-Cookie': ClearSessionCookie() } },
+                { user: null },
+                { headers: { 'Set-Cookie': ClearSessionCookie() } },
             );
         }
 
         const user = await queryOne<UserRow>(
-            `SELECT Id, Email, Name, Role, AvatarUrl, PasswordHash, EmailVerifiedAt
+            `SELECT Id, Email, Name, Role, MembershipExpiresAt, AvatarUrl, PasswordHash, EmailVerifiedAt
              FROM Users WHERE Id = ?`,
             [session.UserId],
         );
 
         if (!user) {
             return NextResponse.json(
-                { error: '用户不存在' },
-                { status: 401, headers: { 'Set-Cookie': ClearSessionCookie() } },
+                { user: null },
+                { headers: { 'Set-Cookie': ClearSessionCookie() } },
             );
         }
+
+        const effectiveRole = getEffectiveRole(user.Role, user.MembershipExpiresAt);
 
         // 获取 OAuth 绑定列表
         const oauthRows = await query<OauthRow>(
@@ -65,10 +66,11 @@ export async function GET(request: NextRequest) {
                 id: user.Id,
                 email: user.Email,
                 name: user.Name,
-                role: user.Role,
+                role: effectiveRole,
                 avatarUrl: user.AvatarUrl,
                 emailVerified: !!user.EmailVerifiedAt,
                 hasPassword: !!user.PasswordHash,
+                membershipExpiresAt: user.MembershipExpiresAt,
                 oauthProviders: oauthRows.map((r) => r.Provider),
             },
         });

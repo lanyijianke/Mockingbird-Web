@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HandleOAuthLogin, SetSessionCookie } from '@/app/api/auth/helpers';
+import { buildAbsoluteUrl } from '@/lib/seo/config';
 
 export const runtime = 'nodejs';
 
@@ -7,8 +8,9 @@ export const runtime = 'nodejs';
 // GET /api/auth/oauth/github — GitHub OAuth 回调
 // ════════════════════════════════════════════════════════════════
 
-const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || '';
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || '';
+const GITHUB_CLIENT_ID = process.env.OAUTH_GITHUB_ID || '';
+const GITHUB_CLIENT_SECRET = process.env.OAUTH_GITHUB_SECRET || '';
+const GITHUB_REDIRECT_URI = buildAbsoluteUrl('/api/auth/oauth/github');
 
 export async function GET(request: NextRequest) {
     try {
@@ -16,7 +18,15 @@ export async function GET(request: NextRequest) {
         const code = searchParams.get('code');
 
         if (!code) {
-            return NextResponse.redirect(new URL('/login?error=oauth_denied', request.url));
+            if (!GITHUB_CLIENT_ID) {
+                return NextResponse.redirect(new URL('/login?error=oauth_unconfigured', request.url));
+            }
+
+            const authorizeUrl = new URL('https://github.com/login/oauth/authorize');
+            authorizeUrl.searchParams.set('client_id', GITHUB_CLIENT_ID);
+            authorizeUrl.searchParams.set('redirect_uri', GITHUB_REDIRECT_URI);
+            authorizeUrl.searchParams.set('scope', 'read:user user:email');
+            return NextResponse.redirect(authorizeUrl);
         }
 
         // 1) 用 code 换 access_token
@@ -30,6 +40,7 @@ export async function GET(request: NextRequest) {
                 client_id: GITHUB_CLIENT_ID,
                 client_secret: GITHUB_CLIENT_SECRET,
                 code,
+                redirect_uri: GITHUB_REDIRECT_URI,
             }),
         });
 

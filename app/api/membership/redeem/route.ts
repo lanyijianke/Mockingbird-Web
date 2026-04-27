@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { RequireRole } from '@/lib/auth/require-role';
 import { queryOne } from '@/lib/db';
 import getDb from '@/lib/db';
+import {
+    canUpgradeRole,
+    getDefaultMembershipDurationDays,
+    REDEEM_ALLOWED_ROLES,
+} from '@/lib/auth/roles';
 
 export const runtime = 'nodejs';
 
@@ -12,10 +17,10 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
     try {
         // 要求已登录
-        const authResult = await RequireRole(request, ['user', 'member', 'admin']);
+        const authResult = await RequireRole(request, REDEEM_ALLOWED_ROLES);
         if (authResult instanceof Response) return authResult;
 
-        const { userId } = authResult;
+        const { userId, role: currentRole } = authResult;
         const body = await request.json();
         const { code } = body;
 
@@ -27,11 +32,13 @@ export async function POST(request: NextRequest) {
         const invitation = await queryOne<{
             Id: number;
             Code: string;
+            TargetRole: string;
+            MembershipDurationDays: number | null;
             MaxUses: number;
             UsedCount: number;
             ExpiresAt: string;
         }>(
-            `SELECT Id, Code, MaxUses, UsedCount, ExpiresAt
+            `SELECT Id, Code, TargetRole, MembershipDurationDays, MaxUses, UsedCount, ExpiresAt
              FROM InvitationCodes
              WHERE Code = ?`,
             [code.trim().toUpperCase()],
@@ -53,6 +60,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: '邀请码已被使用完' }, { status: 400 });
         }
 
+        if (!canUpgradeRole(currentRole, invitation.TargetRole)) {
+            return NextResponse.json({ error: '当前身份已不低于该邀请码对应等级' }, { status: 400 });
+        }
+
         // 检查是否已兑换过
         const existingRedemption = await queryOne<{ Id: number }>(
             `SELECT Id FROM InvitationRedemptions WHERE UserId = ? AND InvitationCodeId = ?`,
@@ -61,6 +72,15 @@ export async function POST(request: NextRequest) {
         if (existingRedemption) {
             return NextResponse.json({ error: '您已使用过该邀请码' }, { status: 400 });
         }
+
+        const membershipDurationDays =
+            invitation.MembershipDurationDays && invitation.MembershipDurationDays > 0
+                ? invitation.MembershipDurationDays
+                : getDefaultMembershipDurationDays(invitation.TargetRole);
+        const membershipExpiresAt = new Date(Date.now() + membershipDurationDays * 86400_000)
+            .toISOString()
+            .replace('T', ' ')
+            .replace(/\.\d{3}Z$/, '');
 
         // 原子事务：递增使用次数 + 记录兑换 + 升级角色
         const db = getDb();
@@ -76,15 +96,16 @@ export async function POST(request: NextRequest) {
             insertRedemption.run(invitation.Id, userId);
 
             const updateRole = db.prepare(
-                `UPDATE Users SET Role = 'member' WHERE Id = ? AND Role = 'user'`,
+                `UPDATE Users SET Role = ?, MembershipExpiresAt = ? WHERE Id = ?`,
             );
-            updateRole.run(userId);
+            updateRole.run(invitation.TargetRole, membershipExpiresAt, userId);
         });
 
         redeem();
 
         return NextResponse.json({
             success: true,
+            role: invitation.TargetRole,
             message: '恭喜！您已成为会员',
         });
     } catch (err) {

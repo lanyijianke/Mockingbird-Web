@@ -10,7 +10,8 @@ import { buildPromptGalleryResetKey } from './infinite-gallery-utils';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const SITE_URL = getSiteSeoConfig().siteUrl;
+const SITE_CONFIG = getSiteSeoConfig();
+const SITE_URL = SITE_CONFIG.siteUrl;
 const PROMPT_CATEGORY_CODES = new Set(getSubcategories('multimodal-prompts').map((item) => item.code));
 const INTERNAL_LINKS = [
     {
@@ -70,7 +71,7 @@ export async function generateMetadata({
 
     return buildPromptsListMetadata({
         title,
-        description: `浏览知更鸟知识库的 AI 提示词精选 — ${title}`,
+        description: `浏览${SITE_CONFIG.siteName}的 AI 提示词精选 — ${title}`,
         canonicalPath,
         searchQuery: q,
     });
@@ -100,7 +101,7 @@ export default async function PromptsPage({
                     { name: '首页', url: SITE_URL },
                     { name: '提示词库', url: `${SITE_URL}${canonicalPath}` },
                 ]),
-                buildCollectionPageJsonLd('提示词库', '浏览知更鸟知识库的全部 AI 提示词精选', `${SITE_URL}${canonicalPath}`),
+                buildCollectionPageJsonLd('提示词库', `浏览${SITE_CONFIG.siteName}的全部 AI 提示词精选`, `${SITE_URL}${canonicalPath}`),
             ]} />
 
             {/* 粘性搜索栏 */}

@@ -1,6 +1,16 @@
+import { getSiteBrandConfig } from '@/lib/site-config';
+
 export interface SiteSeoConfig {
     siteUrl: string;
+    brandName: string;
     siteName: string;
+    alternateName: string;
+    academyName: string;
+    icpNumber: string;
+    icpUrl: string;
+    homeTitle: string;
+    homeDescription: string;
+    serviceName: string;
     locale: string;
     defaultTitle: string;
     titleTemplate: string;
@@ -41,17 +51,26 @@ function normalizeSiteUrl(value: string | undefined): string {
 
 export function getSiteSeoConfig(): SiteSeoConfig {
     const siteUrl = normalizeSiteUrl(process.env.SITE_URL);
+    const brand = getSiteBrandConfig();
 
     return {
         siteUrl,
-        siteName: '知更鸟知识库',
+        brandName: brand.brandName,
+        siteName: brand.siteName,
+        alternateName: brand.alternateName,
+        academyName: brand.academyName,
+        icpNumber: brand.icpNumber,
+        icpUrl: brand.icpUrl,
+        homeTitle: brand.homeTitle,
+        homeDescription: brand.homeDescription,
+        serviceName: brand.serviceName,
         locale: 'zh_CN',
-        defaultTitle: '知更鸟知识库 - AI 教程 | AI 实践 | AI 提示词 | AI 工具',
-        titleTemplate: '%s - 知更鸟知识库',
-        defaultDescription: '知更鸟知识库：提供专业的 AI 教程、AI 实践案例、AI 提示词精选及 AI 工具大全。致力于打造全网最全的泛 AI 知识矩阵。',
+        defaultTitle: `${brand.siteName} - AI 教程 | AI 实践 | AI 提示词 | AI 工具`,
+        titleTemplate: `%s - ${brand.siteName}`,
+        defaultDescription: brand.defaultDescription,
         canIndex: parseBoolean(process.env.SEO_CAN_INDEX, false),
         openGraph: {
-            siteName: '知更鸟知识库',
+            siteName: brand.siteName,
             locale: 'zh_CN',
             type: 'website',
         },

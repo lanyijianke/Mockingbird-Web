@@ -32,4 +32,29 @@ describe('initDatabase', () => {
 
         db.close();
     });
+
+    it('migrates legacy member roles to junior_member during initialization', () => {
+        const db = new Database(':memory:');
+        initDatabase(db);
+
+        db.prepare(
+            `INSERT INTO Users (Id, Name, Email, Role)
+             VALUES ('user-1', 'Legacy Member', 'legacy-member@example.com', 'member')`,
+        ).run();
+        db.prepare(
+            `INSERT INTO InvitationCodes (Code, TargetRole, ExpiresAt)
+             VALUES ('LEGACY-001', 'member', '2099-01-01 00:00:00')`,
+        ).run();
+
+        initDatabase(db);
+
+        expect(db.prepare(`SELECT Role FROM Users WHERE Id = 'user-1'`).get()).toEqual({
+            Role: 'junior_member',
+        });
+        expect(db.prepare(`SELECT TargetRole FROM InvitationCodes WHERE Code = 'LEGACY-001'`).get()).toEqual({
+            TargetRole: 'junior_member',
+        });
+
+        db.close();
+    });
 });

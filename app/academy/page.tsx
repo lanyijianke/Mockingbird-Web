@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getSiteBrandConfig } from '@/lib/site-config';
+
+const SITE_BRAND = getSiteBrandConfig();
 
 interface ContentItem {
   slug: string;
@@ -38,7 +41,7 @@ export default function AcademyPage() {
   return (
     <div className="academy-page">
       <div className="academy-header">
-        <h1 className="academy-title">知更鸟学社</h1>
+        <h1 className="academy-title">{SITE_BRAND.academyName}</h1>
         <p className="academy-subtitle">学社成员专属内容，持续学习、深度成长</p>
       </div>
 

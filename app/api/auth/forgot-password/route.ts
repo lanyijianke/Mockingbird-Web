@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryOne, query } from '@/lib/db';
+import { execute, queryOne } from '@/lib/db';
 import { sendPasswordResetEmail } from '@/lib/email/send';
 import { nanoid } from 'nanoid';
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
                 .replace('T', ' ')
                 .replace(/\.\d{3}Z$/, '');
 
-            await query(
+            await execute(
                 `INSERT INTO PasswordResetTokens (Token, UserId, ExpiresAt) VALUES (?, ?, ?)`,
                 [resetToken, user.Id, expiresAt],
             );

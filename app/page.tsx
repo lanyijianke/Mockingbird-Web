@@ -6,7 +6,7 @@ import {
   getArticleListPath,
 } from '@/lib/articles/article-route-paths';
 import { getCategoryName, getSubcategories } from '@/lib/categories';
-import { buildAbsoluteUrl } from '@/lib/seo/config';
+import { buildAbsoluteUrl, getSiteSeoConfig } from '@/lib/seo/config';
 import { buildHomePageMetadata } from '@/lib/seo/metadata';
 import { buildOrganizationJsonLd, buildWebPageJsonLd, JsonLdScript } from '@/lib/seo/schema';
 import { formatBeijingDate } from '@/lib/utils/time-utils';
@@ -15,11 +15,12 @@ import PromptGalleryCard from '@/app/prompts/PromptGalleryCard';
 export const runtime = 'nodejs';
 export const revalidate = 300;
 const SITE_URL = buildAbsoluteUrl('/');
+const SITE_CONFIG = getSiteSeoConfig();
 const HOME_SEO = {
   metadata: buildHomePageMetadata(),
   webPageJsonLd: buildWebPageJsonLd(
-    '知更鸟知识库 - 泛 AI 知识平台',
-    '深度文章、提示词精选与实时热榜，助你立于 AI 前沿。',
+    SITE_CONFIG.homeTitle,
+    SITE_CONFIG.homeDescription,
     SITE_URL,
   ),
   internalLinks: [

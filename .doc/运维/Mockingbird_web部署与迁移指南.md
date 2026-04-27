@@ -37,6 +37,24 @@ ExecStart=/usr/bin/npm run start -- --hostname 0.0.0.0 --port 5046
 Restart=always
 ```
 
+### 2.1.1 文章内容仓库
+
+生产环境的 AI 文章内容不是放在 `current/` 代码目录里，而是单独挂载为一个本地 Git 仓库：
+
+- 服务器目录：`/home/grank/web-article`
+- GitHub 仓库：`https://github.com/lanyijianke/web-article.git`
+- 当前生产 `ARTICLE_LOCAL_SOURCES`：
+
+```env
+ARTICLE_LOCAL_SOURCES=[{"site":"ai","source":"web-article","rootPath":"/home/grank/web-article","manifestPath":"manifest.json"}]
+```
+
+这意味着：
+
+- 应用代码发布到 `/home/grank/apps/mockingbird-knowledge-web/current`
+- 文章内容更新发布到 `/home/grank/web-article`
+- 不要把文章仓库误认为 `current/` 下的一部分，也不要指向旧的 `tweet2article` 目录
+
 ### 2.2 Nginx 配置
 
 当前站点配置文件：
@@ -128,6 +146,17 @@ rsync -azv --delete \
   服务器:/home/grank/apps/mockingbird-knowledge-web/current/
 ```
 
+2.5 如果本次还包含文章内容更新，必须单独更新文章仓库
+
+`web-article` 是独立仓库，不会随着 `current/` 的代码 rsync 自动更新。
+
+```bash
+cd /home/grank/web-article
+git fetch origin
+git checkout master
+git pull --ff-only origin master
+```
+
 3. 在服务器上重新构建
 
 ```bash
@@ -156,6 +185,7 @@ sudo systemctl reload nginx
 - `SITE_URL=https://aigcclub.com.cn`
 - `SEO_CAN_INDEX=true`
 - `ROBOTS_BLOCK_BAIDU=true`
+- `ARTICLE_LOCAL_SOURCES=[{"site":"ai","source":"web-article","rootPath":"/home/grank/web-article","manifestPath":"manifest.json"}]`
 - `CONTENT_PROMPTS_MEDIA_DIR=/home/grank/apps/mockingbird-knowledge-web/shared/content/prompts/media`
 
 媒体处理依赖这些系统命令：

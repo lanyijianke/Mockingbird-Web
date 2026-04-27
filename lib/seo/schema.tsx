@@ -48,13 +48,15 @@ function getBaseUrl(): string {
 }
 
 export function buildWebSiteJsonLd(): object {
+    const config = getSiteSeoConfig();
+
     return {
         '@context': 'https://schema.org',
         '@type': 'WebSite',
-        name: '知更鸟知识库',
-        alternateName: 'Mockingbird Knowledge',
+        name: config.siteName,
+        alternateName: config.alternateName,
         url: getBaseUrl(),
-        description: '提供专业的 AI 教程、AI 实践案例、AI 提示词精选及 AI 工具大全。致力于打造全网最全的泛 AI 知识矩阵。',
+        description: config.defaultDescription,
         potentialAction: {
             '@type': 'SearchAction',
             target: {
@@ -67,11 +69,13 @@ export function buildWebSiteJsonLd(): object {
 }
 
 export function buildOrganizationJsonLd(): object {
+    const config = getSiteSeoConfig();
+
     return {
         '@context': 'https://schema.org',
         '@type': 'Organization',
-        name: '知更鸟知识库',
-        alternateName: 'Mockingbird Knowledge',
+        name: config.siteName,
+        alternateName: config.alternateName,
         url: getBaseUrl(),
     };
 }
@@ -81,6 +85,8 @@ export function buildWebPageJsonLd(
     description: string,
     url: string,
 ): object {
+    const config = getSiteSeoConfig();
+
     return {
         '@context': 'https://schema.org',
         '@type': 'WebPage',
@@ -89,13 +95,15 @@ export function buildWebPageJsonLd(
         url,
         isPartOf: {
             '@type': 'WebSite',
-            name: '知更鸟知识库',
+            name: config.siteName,
             url: getBaseUrl(),
         },
     };
 }
 
 export function buildArticleJsonLd(article: ArticleJsonLdInput): object {
+    const config = getSiteSeoConfig();
+
     return {
         '@context': 'https://schema.org',
         '@type': 'Article',
@@ -107,12 +115,12 @@ export function buildArticleJsonLd(article: ArticleJsonLdInput): object {
         dateModified: article.updatedAt || article.createdAt,
         author: {
             '@type': 'Organization',
-            name: '知更鸟知识库',
+            name: config.siteName,
             url: getBaseUrl(),
         },
         publisher: {
             '@type': 'Organization',
-            name: '知更鸟知识库',
+            name: config.siteName,
             url: getBaseUrl(),
         },
         mainEntityOfPage: {
@@ -123,6 +131,7 @@ export function buildArticleJsonLd(article: ArticleJsonLdInput): object {
 }
 
 export function buildPromptObjectJsonLd(prompt: PromptObjectJsonLdInput): object {
+    const config = getSiteSeoConfig();
     const url = prompt.url || buildAbsoluteUrl(`/prompts/${prompt.id}`);
 
     return {
@@ -140,17 +149,17 @@ export function buildPromptObjectJsonLd(prompt: PromptObjectJsonLdInput): object
         inLanguage: 'zh-CN',
         author: {
             '@type': 'Organization',
-            name: '知更鸟知识库',
+            name: config.siteName,
             url: getBaseUrl(),
         },
         isPartOf: {
             '@type': 'WebSite',
-            name: '知更鸟知识库',
+            name: config.siteName,
             url: getBaseUrl(),
         },
         publisher: {
             '@type': 'Organization',
-            name: '知更鸟知识库',
+            name: config.siteName,
             url: getBaseUrl(),
         },
         mainEntityOfPage: {
@@ -182,6 +191,8 @@ export function buildCollectionPageJsonLd(
     description: string,
     url: string,
 ): object {
+    const config = getSiteSeoConfig();
+
     return {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -190,7 +201,7 @@ export function buildCollectionPageJsonLd(
         url,
         isPartOf: {
             '@type': 'WebSite',
-            name: '知更鸟知识库',
+            name: config.siteName,
             url: getBaseUrl(),
         },
     };

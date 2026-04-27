@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "invite:generate": "node scripts/generate-invite-codes.mjs"
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",

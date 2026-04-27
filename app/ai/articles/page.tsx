@@ -12,7 +12,8 @@ import { buildBreadcrumbJsonLd, buildCollectionPageJsonLd, JsonLdScript } from '
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const SITE_URL = getSiteSeoConfig().siteUrl;
+const SITE_CONFIG = getSiteSeoConfig();
+const SITE_URL = SITE_CONFIG.siteUrl;
 const INTERNAL_LINKS = [
     {
         href: '/prompts/categories/gemini-3',
@@ -75,7 +76,7 @@ export async function generateMetadata({
 
     return buildArticlesListMetadata({
         title,
-        description: `浏览知更鸟知识库的 AI 文章合集 — ${title}`,
+        description: `浏览${SITE_CONFIG.siteName}的 AI 文章合集 — ${title}`,
         canonicalPath,
         searchQuery: q,
     });
@@ -112,7 +113,7 @@ export default async function AiArticlesPage({
                     { name: '首页', url: SITE_URL },
                     { name: 'AI 文章', url: `${SITE_URL}${canonicalPath}` },
                 ]),
-                buildCollectionPageJsonLd('AI 文章库', '浏览知更鸟知识库的全部 AI 文章', `${SITE_URL}${canonicalPath}`),
+                buildCollectionPageJsonLd('AI 文章库', `浏览${SITE_CONFIG.siteName}的全部 AI 文章`, `${SITE_URL}${canonicalPath}`),
             ]} />
 
             <nav className="breadcrumb">

@@ -2,12 +2,14 @@
 
 import { useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { hasAcademyAccess } from '@/lib/auth/roles';
 
 interface UserInfo {
   id: string;
   name: string;
   email: string;
   role: string;
+  membershipExpiresAt?: string | null;
 }
 
 export default function AcademyLayout({ children }: { children: ReactNode }) {
@@ -21,26 +23,21 @@ export default function AcademyLayout({ children }: { children: ReactNode }) {
         const res = await fetch('/api/auth/me');
 
         if (!res.ok) {
+          throw new Error('failed to fetch current user');
+        }
+
+        const data = await res.json();
+        const user: UserInfo | null = data.user ?? null;
+        if (!user) {
           router.push('/login?callbackUrl=/academy');
           return;
         }
 
-        const data = await res.json();
-        const user: UserInfo = data.user || data;
-
-        // role is 'user' -> redirect to membership
-        if (user.role === 'user') {
-          router.push('/membership');
-          return;
-        }
-
-        // role is 'member' or 'admin' -> allow
-        if (user.role === 'member' || user.role === 'admin') {
+        if (hasAcademyAccess(user.role, user.membershipExpiresAt)) {
           setAuthorized(true);
           return;
         }
 
-        // Unknown role -> treat as user
         router.push('/membership');
       } catch {
         router.push('/login?callbackUrl=/academy');

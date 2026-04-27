@@ -1,3 +1,5 @@
+import { getSiteSeoConfig } from '@/lib/seo/config';
+
 export interface FaqEntry {
     question: string;
     answer: string;
@@ -55,6 +57,8 @@ export interface RankingTopicPageDefinition {
     blocks: GrowthPageBlock[];
 }
 
+const SITE_CONFIG = getSiteSeoConfig();
+
 const PROMPT_SCENARIO_PAGES: PromptScenarioPageDefinition[] = [
     {
         slug: 'video-generation',
@@ -107,8 +111,8 @@ const PROMPT_SCENARIO_PAGES: PromptScenarioPageDefinition[] = [
                 items: [
                     {
                         label: 'Prompt Source',
-                        value: 'Mockingbird prompt library category feed',
-                        sourceName: 'Mockingbird',
+                        value: `${SITE_CONFIG.alternateName} prompt library category feed`,
+                        sourceName: SITE_CONFIG.alternateName,
                         sourceUrl: '/prompts',
                     },
                 ],

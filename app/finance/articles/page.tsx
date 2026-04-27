@@ -9,7 +9,8 @@ import { buildBreadcrumbJsonLd, buildCollectionPageJsonLd, JsonLdScript } from '
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const SITE_URL = getSiteSeoConfig().siteUrl;
+const SITE_CONFIG = getSiteSeoConfig();
+const SITE_URL = SITE_CONFIG.siteUrl;
 const INTERNAL_LINKS = [
     {
         href: '/prompts',
@@ -72,7 +73,7 @@ export async function generateMetadata({
 
     return buildArticlesListMetadata({
         title,
-        description: `浏览知更鸟知识库的金融文章合集 — ${title}`,
+        description: `浏览${SITE_CONFIG.siteName}的金融文章合集 — ${title}`,
         canonicalPath,
         searchQuery: q,
     });
@@ -110,7 +111,7 @@ export default async function FinanceArticlesPage({
                     { name: '首页', url: SITE_URL },
                     { name: '金融文章', url: `${SITE_URL}${canonicalPath}` },
                 ]),
-                buildCollectionPageJsonLd('金融文章库', '浏览知更鸟知识库的全部金融文章', `${SITE_URL}${canonicalPath}`),
+                buildCollectionPageJsonLd('金融文章库', `浏览${SITE_CONFIG.siteName}的全部金融文章`, `${SITE_URL}${canonicalPath}`),
             ]} />
 
             <nav className="breadcrumb">

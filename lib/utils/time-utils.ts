@@ -6,6 +6,39 @@
 
 const TIMEZONE = 'Asia/Shanghai';
 
+function normalizeStoredDateTime(dateStr: string): string {
+  if (dateStr.includes('T')) {
+    return dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`;
+  }
+
+  return `${dateStr.replace(' ', 'T')}Z`;
+}
+
+export function parseUtcStorageDate(dateStr?: string | null): Date | null {
+  if (!dateStr) {
+    return null;
+  }
+
+  const parsed = new Date(normalizeStoredDateTime(dateStr));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function formatUtcStorageDateTimeBeijing(dateStr?: string | null): string | null {
+  const parsed = parseUtcStorageDate(dateStr);
+  if (!parsed) {
+    return null;
+  }
+
+  return parsed.toLocaleString('zh-CN', {
+    timeZone: TIMEZONE,
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 /**
  * 格式化为北京时间的英文日期 (e.g. "MAR 11, 2026")
  */

@@ -55,6 +55,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: '邮箱或密码不正确' }, { status: 401 });
         }
 
+        if (!user.EmailVerifiedAt) {
+            return NextResponse.json({ error: '请先验证邮箱后再登录' }, { status: 403 });
+        }
+
         // 创建会话
         const sessionToken = await CreateSession(user.Id);
 
