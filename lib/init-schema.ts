@@ -95,4 +95,118 @@ export function initDatabase(db: Database.Database): void {
         CREATE INDEX IF NOT EXISTS idx_prompts_sourceurl  ON Prompts(SourceUrl);
         CREATE INDEX IF NOT EXISTS idx_prompts_rawtitle   ON Prompts(RawTitle);
     `);
+
+    // ════════════════════════════════════════════════════════════════
+    // 用户与认证
+    // ════════════════════════════════════════════════════════════════
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS Users (
+            Id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+            Name            TEXT    NOT NULL DEFAULT '',
+            Email           TEXT    NOT NULL UNIQUE,
+            PasswordHash    TEXT    DEFAULT NULL,
+            AvatarUrl       TEXT    DEFAULT NULL,
+            Role            TEXT    NOT NULL DEFAULT 'user',
+            EmailVerifiedAt TEXT    DEFAULT NULL,
+            CreatedAt       TEXT    DEFAULT (datetime('now')),
+            UpdatedAt       TEXT    DEFAULT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_users_email ON Users(Email);
+        CREATE INDEX IF NOT EXISTS idx_users_role  ON Users(Role);
+
+        CREATE TABLE IF NOT EXISTS Sessions (
+            Id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            Token     TEXT    NOT NULL UNIQUE,
+            UserId    TEXT    NOT NULL REFERENCES Users(Id),
+            ExpiresAt TEXT    NOT NULL,
+            CreatedAt TEXT    DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sessions_token    ON Sessions(Token);
+        CREATE INDEX IF NOT EXISTS idx_sessions_userId   ON Sessions(UserId);
+        CREATE INDEX IF NOT EXISTS idx_sessions_expires  ON Sessions(ExpiresAt);
+
+        CREATE TABLE IF NOT EXISTS OauthAccounts (
+            Id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            Provider          TEXT    NOT NULL,
+            ProviderAccountId TEXT    NOT NULL,
+            UserId            TEXT    NOT NULL REFERENCES Users(Id),
+            CreatedAt         TEXT    DEFAULT (datetime('now')),
+            UNIQUE(Provider, ProviderAccountId)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_oauth_userId ON OauthAccounts(UserId);
+
+        CREATE TABLE IF NOT EXISTS EmailVerificationTokens (
+            Id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            Token     TEXT    NOT NULL UNIQUE,
+            UserId    TEXT    NOT NULL REFERENCES Users(Id),
+            ExpiresAt TEXT    NOT NULL,
+            CreatedAt TEXT    DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_emailverify_token ON EmailVerificationTokens(Token);
+
+        CREATE TABLE IF NOT EXISTS PasswordResetTokens (
+            Id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            Token     TEXT    NOT NULL UNIQUE,
+            UserId    TEXT    NOT NULL REFERENCES Users(Id),
+            ExpiresAt TEXT    NOT NULL,
+            CreatedAt TEXT    DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_pwdreset_token ON PasswordResetTokens(Token);
+    `);
+
+    // ════════════════════════════════════════════════════════════════
+    // 会员邀请
+    // ════════════════════════════════════════════════════════════════
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS InvitationCodes (
+            Id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            Code      TEXT    NOT NULL UNIQUE,
+            MaxUses   INTEGER NOT NULL DEFAULT 1,
+            UsedCount INTEGER NOT NULL DEFAULT 0,
+            ExpiresAt TEXT    NOT NULL,
+            CreatedAt TEXT    DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_invite_code ON InvitationCodes(Code);
+
+        CREATE TABLE IF NOT EXISTS InvitationRedemptions (
+            Id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            InvitationCodeId  INTEGER NOT NULL REFERENCES InvitationCodes(Id),
+            UserId            TEXT    NOT NULL REFERENCES Users(Id),
+            RedeemedAt        TEXT    DEFAULT (datetime('now')),
+            UNIQUE(InvitationCodeId, UserId)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_redemption_user ON InvitationRedemptions(UserId);
+    `);
+
+    // ════════════════════════════════════════════════════════════════
+    // 学院内容
+    // ════════════════════════════════════════════════════════════════
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS AcademyContent (
+            Id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            Slug         TEXT    NOT NULL UNIQUE,
+            Title        TEXT    NOT NULL,
+            Summary      TEXT    DEFAULT '',
+            Content      TEXT    DEFAULT '',
+            Category     TEXT    DEFAULT '',
+            CoverImageUrl TEXT   DEFAULT NULL,
+            Status       TEXT    NOT NULL DEFAULT 'draft',
+            PublishedAt  TEXT    DEFAULT NULL,
+            CreatedAt    TEXT    DEFAULT (datetime('now')),
+            UpdatedAt    TEXT    DEFAULT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_academy_slug    ON AcademyContent(Slug);
+        CREATE INDEX IF NOT EXISTS idx_academy_status  ON AcademyContent(Status);
+    `);
 }

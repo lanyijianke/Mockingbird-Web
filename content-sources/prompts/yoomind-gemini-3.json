@@ -1,0 +1,12 @@
+{
+  "id": "yoomind-gemini-3",
+  "type": "github-readme",
+  "owner": "YouMind-OpenLab",
+  "repo": "awesome-gemini-3-prompts",
+  "branch": "main",
+  "file": "README_zh.md",
+  "adapter": "github-readme-yoomind",
+  "locale": "zh-CN",
+  "defaultCategory": "gemini-3",
+  "enabled": true
+}

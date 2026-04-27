@@ -42,12 +42,9 @@ public/content/
 /content/
 raw-incoming/prompts/
 
-# sqlite data
-/data/
+# sqlite data (schema auto-created, but track the DB for convenience)
+#/data/
 
-# env secrets
-.env*.local
-.env.local
 
 # test artifacts
 test-results/

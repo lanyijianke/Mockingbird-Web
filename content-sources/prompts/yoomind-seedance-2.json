@@ -1,0 +1,12 @@
+{
+  "id": "yoomind-seedance-2",
+  "type": "github-readme",
+  "owner": "YouMind-OpenLab",
+  "repo": "awesome-seedance-2-prompts",
+  "branch": "main",
+  "file": "README_zh.md",
+  "adapter": "github-readme-yoomind",
+  "locale": "zh-CN",
+  "defaultCategory": "seedance-2",
+  "enabled": true
+}

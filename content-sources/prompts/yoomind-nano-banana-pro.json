@@ -1,0 +1,12 @@
+{
+  "id": "yoomind-nano-banana-pro",
+  "type": "github-readme",
+  "owner": "YouMind-OpenLab",
+  "repo": "awesome-nano-banana-pro-prompts",
+  "branch": "main",
+  "file": "README_zh.md",
+  "adapter": "github-readme-yoomind",
+  "locale": "zh-CN",
+  "defaultCategory": "nano-banana",
+  "enabled": true
+}
