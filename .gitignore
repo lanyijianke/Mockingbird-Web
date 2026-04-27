@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# env
+.env.local
+.env*.local
+
 # debug
 npm-debug.log*
 yarn-debug.log*
@@ -42,8 +46,8 @@ public/content/
 /content/
 raw-incoming/prompts/
 
-# sqlite data (schema auto-created, but track the DB for convenience)
-#/data/
+# sqlite data (auto-created by init-schema)
+/data/
 
 
 # test artifacts
