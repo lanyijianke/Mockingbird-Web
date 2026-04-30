@@ -36,7 +36,7 @@ export async function writeLog(
     try {
         await execute(
             `INSERT INTO SystemLogs (Level, Source, Message, Detail, CreatedAt)
-             VALUES (?, ?, ?, ?, datetime('now'))`,
+             VALUES (?, ?, ?, ?, NOW())`,
             [level, source, message, detail ?? null]
         );
     } catch {
@@ -109,7 +109,7 @@ export async function queryLogs(options: LogQueryOptions = {}): Promise<{
  */
 export async function purgeOldLogs(retainDays: number = 7): Promise<number> {
     const result = await execute(
-        `DELETE FROM SystemLogs WHERE CreatedAt < datetime('now', '-' || ? || ' days')`,
+        `DELETE FROM SystemLogs WHERE CreatedAt < DATE_SUB(NOW(), INTERVAL ? DAY)`,
         [retainDays]
     );
     return result.affectedRows;

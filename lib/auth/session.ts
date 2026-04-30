@@ -42,7 +42,7 @@ export async function GetSession(token: string): Promise<SessionRow | null> {
     const session = await queryOne<SessionRow>(
         `SELECT Id, Token, UserId, ExpiresAt, CreatedAt
          FROM Sessions
-         WHERE Token = ? AND ExpiresAt > datetime('now')`,
+         WHERE Token = ? AND ExpiresAt > NOW()`,
         [token],
     );
 

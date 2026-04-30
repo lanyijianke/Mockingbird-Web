@@ -135,14 +135,14 @@ async function upsertPromptRecord(
 
         if (updates.length === 0) return 'skipped';
 
-        updates.push('UpdatedAt = datetime(\'now\')');
+        updates.push('UpdatedAt = NOW()');
         await execute(`UPDATE Prompts SET ${updates.join(', ')} WHERE Id = ?`, [...updateArgs, existing.Id]);
         return 'updated';
     }
 
     await execute(
         `INSERT INTO Prompts (Title, RawTitle, Description, Content, Category, Source, Author, SourceUrl, CoverImageUrl, VideoPreviewUrl, CardPreviewVideoUrl, ImagesJson, CopyCount, IsActive, CreatedAt)
-         VALUES (?, ?, ?, ?, ?, 'github', ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'))`,
+         VALUES (?, ?, ?, ?, ?, 'github', ?, ?, ?, ?, ?, ?, ?, 1, NOW())`,
         [
             record.title,
             record.rawTitle || record.title,

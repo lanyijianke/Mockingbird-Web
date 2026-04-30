@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
         }>(
             `SELECT Id, UserId, ExpiresAt
              FROM PasswordResetTokens
-             WHERE Token = ? AND ExpiresAt > datetime('now')`,
+             WHERE Token = ? AND ExpiresAt > NOW()`,
             [token],
         );
 

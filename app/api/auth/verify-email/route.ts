@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         }>(
             `SELECT Id, UserId, ExpiresAt
              FROM EmailVerificationTokens
-             WHERE Token = ? AND ExpiresAt > datetime('now')`,
+             WHERE Token = ? AND ExpiresAt > NOW()`,
             [token],
         );
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
         // 更新用户邮箱验证时间
         await execute(
-            `UPDATE Users SET EmailVerifiedAt = datetime('now') WHERE Id = ?`,
+            `UPDATE Users SET EmailVerifiedAt = NOW() WHERE Id = ?`,
             [verification.UserId],
         );
 
