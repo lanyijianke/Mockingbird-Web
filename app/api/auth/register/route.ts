@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { execute, queryOne } from '@/lib/db';
 import { sendVerificationEmail } from '@/lib/email/send';
+import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { nanoid } from 'nanoid';
 
@@ -48,19 +49,12 @@ export async function POST(request: NextRequest) {
         const passwordHash = await bcrypt.hash(password, 12);
 
         // 插入用户
+        const userId = crypto.randomUUID();
+
         await execute(
-            `INSERT INTO Users (Name, Email, PasswordHash, Role) VALUES (?, ?, ?, 'user')`,
-            [trimmedName, trimmedEmail, passwordHash],
+            `INSERT INTO Users (Id, Name, Email, PasswordHash, Role) VALUES (?, ?, ?, ?, 'user')`,
+            [userId, trimmedName, trimmedEmail, passwordHash],
         );
-
-        const user = await queryOne<{ Id: string }>(
-            `SELECT Id FROM Users WHERE Email = ?`,
-            [trimmedEmail],
-        );
-
-        if (!user) {
-            return NextResponse.json({ error: '注册失败，请重试' }, { status: 500 });
-        }
 
         // 生成邮箱验证 token
         const verifyToken = nanoid(32);
@@ -71,7 +65,7 @@ export async function POST(request: NextRequest) {
 
         await execute(
             `INSERT INTO EmailVerificationTokens (Token, UserId, ExpiresAt) VALUES (?, ?, ?)`,
-            [verifyToken, user.Id, verifyExpires],
+            [verifyToken, userId, verifyExpires],
         );
 
         // 发送验证邮件
@@ -86,7 +80,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             message: '注册成功，请先验证邮箱',
-            user: { id: user.Id, email: trimmedEmail, name: trimmedName },
+            user: { id: userId, email: trimmedEmail, name: trimmedName },
         }, { status: 201 });
     } catch (err) {
         console.error('[Register] Error:', err);

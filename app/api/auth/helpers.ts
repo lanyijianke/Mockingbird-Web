@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import crypto from 'node:crypto';
 import { execute, queryOne } from '@/lib/db';
 import { CreateSession } from '@/lib/auth/session';
 
@@ -82,17 +83,18 @@ export async function HandleOAuthLogin(
         }
     } else {
         // 2) 未绑定 — 按 email 找或建用户
-        let user = await queryOne<{ Id: string }>(`SELECT Id FROM Users WHERE Email = ?`, [email]);
+        const user = await queryOne<{ Id: string }>(`SELECT Id FROM Users WHERE Email = ?`, [email]);
 
         if (!user) {
-            await execute(
-                `INSERT INTO Users (Name, Email, Role) VALUES (?, ?, 'user')`,
-                [name, email],
-            );
-            user = await queryOne<{ Id: string }>(`SELECT Id FROM Users WHERE Email = ?`, [email]);
-        }
+            userId = crypto.randomUUID();
 
-        userId = user!.Id;
+            await execute(
+                `INSERT INTO Users (Id, Name, Email, Role) VALUES (?, ?, ?, ?)`,
+                [userId, name, email, 'user'],
+            );
+        } else {
+            userId = user.Id;
+        }
 
         // 建立 OAuth 绑定
         await execute(
