@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Database from 'better-sqlite3';
+import mysql from 'mysql2/promise';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -142,13 +142,14 @@ function resolveMembershipTerm(role, term) {
     };
 }
 
-function resolveDbPath() {
+function resolveMysqlUrl() {
     loadEnvLocal();
 
-    const configuredPath = process.env.SQLITE_DB_PATH || path.join('data', 'knowledge.db');
-    return path.isAbsolute(configuredPath)
-        ? configuredPath
-        : path.resolve(process.cwd(), configuredPath);
+    const url = process.env.MYSQL_URL;
+    if (!url) {
+        throw new Error('MYSQL_URL environment variable is not set');
+    }
+    return url;
 }
 
 function formatSqliteDate(date) {
@@ -168,46 +169,50 @@ function formatBeijingDisplay(date) {
     }).format(date);
 }
 
-function ensureColumn(db, tableName, columnName, definition) {
-    const columns = db.prepare(`PRAGMA table_info(${tableName})`).all();
-    if (columns.some((column) => column.name === columnName)) {
+async function ensureColumn(conn, tableName, columnName, definition) {
+    const [rows] = await conn.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+        [tableName, columnName],
+    );
+    if (rows.length > 0) {
         return;
     }
 
-    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+    await conn.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
 }
 
-function ensureInvitationSchema(db) {
-    const tableExists = db
-        .prepare(
-            `SELECT name
-             FROM sqlite_master
-             WHERE type = 'table' AND name = 'InvitationCodes'`,
-        )
-        .get();
+async function ensureInvitationSchema(conn) {
+    const [tables] = await conn.query(
+        `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'InvitationCodes'`,
+    );
 
-    if (!tableExists) {
-        throw new Error('InvitationCodes table does not exist in the target SQLite database');
+    if (tables.length === 0) {
+        throw new Error('InvitationCodes table does not exist in the target MySQL database');
     }
 
-    const columns = db.prepare('PRAGMA table_info(InvitationCodes)').all();
-    const columnNames = new Set(columns.map((column) => column.name));
+    const [columns] = await conn.query(
+        `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'InvitationCodes'`,
+    );
+    const columnNames = new Set(columns.map((col) => col.COLUMN_NAME));
 
     if (!columnNames.has('TargetRole')) {
-        ensureColumn(db, 'InvitationCodes', 'TargetRole', `TEXT NOT NULL DEFAULT 'junior_member'`);
+        await ensureColumn(conn, 'InvitationCodes', 'TargetRole', `VARCHAR(50) NOT NULL DEFAULT 'junior_member'`);
     }
 
     if (!columnNames.has('MembershipDurationDays')) {
-        ensureColumn(db, 'InvitationCodes', 'MembershipDurationDays', 'INTEGER NOT NULL DEFAULT 30');
+        await ensureColumn(conn, 'InvitationCodes', 'MembershipDurationDays', 'INT NOT NULL DEFAULT 30');
     }
 
-    db.exec(`
+    await conn.query(`
         UPDATE InvitationCodes
         SET TargetRole = 'junior_member'
-        WHERE TargetRole IS NULL OR trim(TargetRole) = ''
+        WHERE TargetRole IS NULL OR TRIM(TargetRole) = ''
     `);
 
-    db.exec(`
+    await conn.query(`
         UPDATE InvitationCodes
         SET MembershipDurationDays = CASE
             WHEN TargetRole = 'founder_member' THEN ${FOUNDER_DURATION_DAYS}
@@ -228,24 +233,22 @@ function generateUniqueCode(existingCodes) {
     }
 }
 
-function main() {
+async function main() {
     const { role, term, count, days } = parseArgs(process.argv.slice(2));
     const membership = resolveMembershipTerm(role, term);
-    const dbPath = resolveDbPath();
-    const db = new Database(dbPath);
+    const url = resolveMysqlUrl();
+    const conn = await mysql.createConnection(url);
 
     try {
-        ensureInvitationSchema(db);
+        await ensureInvitationSchema(conn);
 
         const inviteExpiresAt = formatSqliteDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
-        const insertStatement = db.prepare(
-            `INSERT INTO InvitationCodes (Code, TargetRole, MaxUses, UsedCount, ExpiresAt, MembershipDurationDays)
-             VALUES (?, ?, 1, 0, ?, ?)`,
-        );
         const existingCodes = new Set();
         const codes = [];
 
-        const insertMany = db.transaction(() => {
+        await conn.beginTransaction();
+
+        try {
             for (let index = 0; index < count; index += 1) {
                 let inserted = false;
 
@@ -253,22 +256,29 @@ function main() {
                     const code = generateUniqueCode(existingCodes);
 
                     try {
-                        insertStatement.run(code, role, inviteExpiresAt, membership.durationDays);
+                        await conn.query(
+                            `INSERT INTO InvitationCodes (Code, TargetRole, MaxUses, UsedCount, ExpiresAt, MembershipDurationDays)
+                             VALUES (?, ?, 1, 0, ?, ?)`,
+                            [code, role, inviteExpiresAt, membership.durationDays],
+                        );
                         codes.push(code);
                         inserted = true;
                     } catch (error) {
                         existingCodes.delete(code);
-                        if (!String(error.message).includes('UNIQUE constraint failed: InvitationCodes.Code')) {
+                        if (!String(error.message).includes('Duplicate entry')) {
                             throw error;
                         }
                     }
                 }
             }
-        });
 
-        insertMany();
+            await conn.commit();
+        } catch (error) {
+            await conn.rollback();
+            throw error;
+        }
 
-        console.log(`DB: ${dbPath}`);
+        console.log(`DB: MySQL`);
         console.log(`Role: ${role}`);
         console.log(`Term: ${membership.termLabel}`);
         console.log(`InviteExpiry(GMT+8): ${formatBeijingDisplay(new Date(Date.now() + days * 24 * 60 * 60 * 1000))}`);
@@ -277,7 +287,7 @@ function main() {
             console.log(code);
         }
     } finally {
-        db.close();
+        await conn.end();
     }
 }
 
