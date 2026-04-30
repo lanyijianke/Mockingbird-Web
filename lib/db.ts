@@ -1,48 +1,38 @@
-import Database from 'better-sqlite3';
-import fs from 'node:fs';
-import path from 'node:path';
+import mysql from 'mysql2/promise';
 import { initDatabase } from './init-schema';
 
 // ────────────────────────────────────────────────────────────────
-// SQLite 数据库 — 替代原 MySQL 连接池
-// better-sqlite3 是同步 API，零网络开销，对内容站极其高效
+// MySQL 数据库 — mysql2/promise 连接池
 // ────────────────────────────────────────────────────────────────
 
-// 通用查询参数类型
-type QueryParams = (string | number | boolean | null | Buffer)[];
+type QueryParams = (string | number | boolean | null | Buffer | Date)[];
 
-let db: Database.Database | null = null;
+let pool: mysql.Pool | null = null;
 
-function getDb(): Database.Database {
-    if (!db) {
-        const dbPath = process.env.SQLITE_DB_PATH || path.join(process.cwd(), 'data', 'knowledge.db');
-        const resolvedPath = path.isAbsolute(dbPath) ? dbPath : path.join(process.cwd(), dbPath);
-
-        // 确保目录存在
-        const dir = path.dirname(resolvedPath);
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
+async function getPool(): Promise<mysql.Pool> {
+    if (!pool) {
+        const url = process.env.MYSQL_URL;
+        if (!url) {
+            throw new Error('MYSQL_URL 环境变量未设置');
         }
 
-        db = new Database(resolvedPath);
-
-        // 性能优化
-        db.pragma('journal_mode = WAL');
-        db.pragma('synchronous = NORMAL');
-        db.pragma('foreign_keys = ON');
+        pool = mysql.createPool(url, {
+            waitForConnections: true,
+            connectionLimit: 10,
+            charset: 'utf8mb4',
+        });
 
         // 自动建表
-        initDatabase(db);
-
-        console.log(`[DB] SQLite 已连接: ${resolvedPath}`);
+        const conn = await pool.getConnection();
+        try {
+            await initDatabase(conn);
+            console.log('[DB] MySQL 已连接');
+        } finally {
+            conn.release();
+        }
     }
-    return db;
+    return pool;
 }
-
-// ────────────────────────────────────────────────────────────────
-// 类型安全的查询辅助函数
-// 保持与原 MySQL 版本相同的 API 签名，使调用方零改动
-// ────────────────────────────────────────────────────────────────
 
 /**
  * 查询多行数据
@@ -51,8 +41,8 @@ export async function query<T = Record<string, unknown>>(
     sql: string,
     params?: QueryParams
 ): Promise<T[]> {
-    const stmt = getDb().prepare(sql);
-    return (params ? stmt.all(...params) : stmt.all()) as T[];
+    const [rows] = await (await getPool()).query(sql, params);
+    return rows as T[];
 }
 
 /**
@@ -62,9 +52,9 @@ export async function queryOne<T = Record<string, unknown>>(
     sql: string,
     params?: QueryParams
 ): Promise<T | null> {
-    const stmt = getDb().prepare(sql);
-    const row = params ? stmt.get(...params) : stmt.get();
-    return (row as T) ?? null;
+    const [rows] = await (await getPool()).query(sql, params);
+    const arr = rows as T[];
+    return arr.length > 0 ? arr[0] : null;
 }
 
 /**
@@ -74,37 +64,53 @@ export async function queryScalar<T = number>(
     sql: string,
     params?: QueryParams
 ): Promise<T | null> {
-    const stmt = getDb().prepare(sql);
-    const row = params ? stmt.get(...params) : stmt.get();
-    if (!row) return null;
-    const firstKey = Object.keys(row as object)[0];
-    return (row as Record<string, unknown>)[firstKey] as T;
+    const [rows] = await (await getPool()).query(sql, params);
+    const arr = rows as Record<string, unknown>[];
+    if (arr.length === 0) return null;
+    return arr[0][Object.keys(arr[0])[0]] as T;
 }
 
 /**
  * 执行写操作 (INSERT / UPDATE / DELETE)
- * 返回 { affectedRows, insertId } 以兼容原 MySQL ResultSetHeader
  */
 export async function execute(
     sql: string,
     params?: QueryParams
 ): Promise<{ affectedRows: number; insertId: number }> {
-    const stmt = getDb().prepare(sql);
-    const result = params ? stmt.run(...params) : stmt.run();
-    return {
-        affectedRows: result.changes,
-        insertId: Number(result.lastInsertRowid),
-    };
+    const [result] = await (await getPool()).query(sql, params);
+    const rs = result as mysql.ResultSetHeader;
+    return { affectedRows: rs.affectedRows, insertId: rs.insertId };
 }
 
 /**
- * 关闭数据库（用于 graceful shutdown）
+ * 异步事务封装
  */
-export async function closePool(): Promise<void> {
-    if (db) {
-        db.close();
-        db = null;
+export async function transaction<T>(
+    fn: (conn: mysql.PoolConnection) => Promise<T>
+): Promise<T> {
+    const p = await getPool();
+    const conn = await p.getConnection();
+    try {
+        await conn.beginTransaction();
+        const result = await fn(conn);
+        await conn.commit();
+        return result;
+    } catch (err) {
+        await conn.rollback();
+        throw err;
+    } finally {
+        conn.release();
     }
 }
 
-export default getDb;
+/**
+ * 关闭连接池
+ */
+export async function closePool(): Promise<void> {
+    if (pool) {
+        await pool.end();
+        pool = null;
+    }
+}
+
+export default getPool;
