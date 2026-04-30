@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs';
+import mysql from 'mysql2/promise';
 
 // ════════════════════════════════════════════════════════════════
 // 生成邀请码 — CLI 工具
@@ -65,40 +66,49 @@ async function main(): Promise<void> {
 
     const expiresMs = parseExpires(expiresStr);
 
-    // 动态导入数据库模块（确保 .env.local 已加载）
-    const { default: getDb } = await import('../lib/db');
-
-    const db = getDb();
-    const expiresAt = new Date(Date.now() + expiresMs)
-        .toISOString()
-        .replace('T', ' ')
-        .replace(/\.\d{3}Z$/, '');
-
-    const insertStmt = db.prepare(
-        `INSERT INTO InvitationCodes (Code, MaxUses, UsedCount, ExpiresAt) VALUES (?, 1, 0, ?)`,
-    );
-
-    const codes: string[] = [];
-
-    const insertMany = db.transaction(() => {
-        for (let i = 0; i < count; i++) {
-            const code = crypto.randomBytes(4).toString('hex').toUpperCase();
-            insertStmt.run(code, expiresAt);
-            codes.push(code);
-        }
-    });
-
-    insertMany();
-
-    console.log(`\n已生成 ${count} 个邀请码（有效期 ${expiresStr}）：\n`);
-    for (const code of codes) {
-        console.log(`  ${code}`);
+    const url = process.env.MYSQL_URL;
+    if (!url) {
+        console.error('错误: MYSQL_URL 环境变量未设置');
+        process.exit(1);
     }
-    console.log(`\n过期时间: ${expiresAt}`);
-    console.log(`每人限用: 1 次\n`);
 
-    // 关闭数据库连接
-    db.close();
+    const conn = await mysql.createConnection(url);
+
+    try {
+        const expiresAt = new Date(Date.now() + expiresMs)
+            .toISOString()
+            .replace('T', ' ')
+            .replace(/\.\d{3}Z$/, '');
+
+        const codes: string[] = [];
+
+        await conn.beginTransaction();
+
+        try {
+            for (let i = 0; i < count; i++) {
+                const code = crypto.randomBytes(4).toString('hex').toUpperCase();
+                await conn.query(
+                    `INSERT INTO InvitationCodes (Code, MaxUses, UsedCount, ExpiresAt) VALUES (?, 1, 0, ?)`,
+                    [code, expiresAt],
+                );
+                codes.push(code);
+            }
+
+            await conn.commit();
+        } catch (error) {
+            await conn.rollback();
+            throw error;
+        }
+
+        console.log(`\n已生成 ${count} 个邀请码（有效期 ${expiresStr}）：\n`);
+        for (const code of codes) {
+            console.log(`  ${code}`);
+        }
+        console.log(`\n过期时间: ${expiresAt}`);
+        console.log(`每人限用: 1 次\n`);
+    } finally {
+        await conn.end();
+    }
 }
 
 main().catch((err) => {
