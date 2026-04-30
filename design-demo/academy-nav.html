@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>知更鸟学社 — 导航框架 Demo</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Noto+Serif+SC:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <style>
+    /* ════════════════════════════════════════════════════════════════
+       Design Tokens — Academy Extension
+       ════════════════════════════════════════════════════════════════ */
+    :root {
+      /* Core palette (from main site) */
+      --primary: #C0F0FB;
+      --primary-hover: #9ae0ef;
+      --bg-main: #000000;
+      --bg-secondary: #111111;
+      --text-main: #f5f5f5;
+      --text-muted: #999999;
+      --glass-bg: rgba(17, 17, 17, 0.9);
+      --glass-border: rgba(255, 255, 255, 0.08);
+
+      /* Academy-specific palette */
+      --academy-gold: #E8D5B7;
+      --academy-gold-dim: rgba(232, 213, 183, 0.15);
+      --academy-gold-glow: rgba(232, 213, 183, 0.06);
+      --academy-warm: #F5EDE3;
+      --academy-sidebar-w: 260px;
+
+      /* Typography */
+      --font-serif: "Playfair Display", "Noto Serif SC", Georgia, serif;
+      --font-sans: "DM Sans", "Noto Sans SC", -apple-system, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      --nav-height: 60px;
+      --radius-lg: 12px;
+      --radius-md: 8px;
+    }
+
+    /* ═══════ Reset ═══════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ════════════════════════════════════════════════════════════════
+       Top Navigation — Extended with Academy Entry
+       ════════════════════════════════════════════════════════════════ */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.95);
+      border-bottom: 1px solid var(--glass-border);
+      height: var(--nav-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      backdrop-filter: blur(12px);
+    }
+
+    .nav-left { display: flex; align-items: center; gap: 1.2rem; }
+    .nav-center {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .nav-brand-name {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .nav-divider {
+      width: 80px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--glass-border), transparent);
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .nav-link {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+    .nav-link:hover { color: var(--text-main); }
+    .nav-link.active { color: var(--text-main); }
+
+    /* Academy nav link — gold accent when active */
+    .nav-link.academy-link.active {
+      color: var(--academy-gold);
+    }
+
+    /* Nav dropdown */
+    .nav-dropdown { position: relative; }
+    .nav-dropdown-trigger {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      cursor: pointer;
+    }
+    .nav-dropdown-arrow {
+      font-size: 0.6rem;
+      transition: transform 0.25s ease;
+    }
+    .nav-dropdown:hover .nav-dropdown-arrow { transform: rotate(180deg); }
+    .nav-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 0.6rem);
+      right: 0;
+      min-width: 200px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 0.5rem 0;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-4px);
+      transition: all 0.2s ease;
+    }
+    .nav-dropdown:hover .nav-dropdown-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .nav-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .nav-dropdown-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    /* Auth button */
+    .nav-auth-btn {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 0.35rem 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-auth-btn:hover {
+      color: var(--text-main);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Academy Page Layout — Sidebar + Content
+       ════════════════════════════════════════════════════════════════ */
+    .academy-layout {
+      display: flex;
+      min-height: calc(100vh - var(--nav-height));
+    }
+
+    /* Sidebar */
+    .academy-sidebar {
+      width: var(--academy-sidebar-w);
+      min-height: 100%;
+      border-right: 1px solid rgba(232, 213, 183, 0.06);
+      background: rgba(8, 6, 4, 0.5);
+      padding: 1.5rem 0;
+      flex-shrink: 0;
+      position: sticky;
+      top: var(--nav-height);
+      height: calc(100vh - var(--nav-height));
+      overflow-y: auto;
+    }
+
+    /* Member card in sidebar */
+    .sidebar-member-card {
+      margin: 0 1rem 1.5rem;
+      padding: 1rem;
+      background: var(--academy-gold-dim);
+      border: 1px solid rgba(232, 213, 183, 0.1);
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+    .sidebar-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--academy-gold), #C4A882);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin: 0 auto 0.6rem;
+    }
+    .sidebar-member-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.3rem;
+    }
+    .sidebar-member-tier {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--academy-gold);
+      background: rgba(232, 213, 183, 0.1);
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      border: 1px solid rgba(232, 213, 183, 0.15);
+    }
+    .sidebar-member-expiry {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    /* Sidebar navigation groups */
+    .sidebar-group {
+      margin-bottom: 1.2rem;
+    }
+    .sidebar-group-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(232, 213, 183, 0.3);
+      padding: 0 1.3rem;
+      margin-bottom: 0.4rem;
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.55rem 1.3rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.5);
+      transition: all 0.2s;
+      cursor: pointer;
+      position: relative;
+    }
+    .sidebar-item i {
+      font-size: 0.95rem;
+      width: 18px;
+      text-align: center;
+    }
+    .sidebar-item:hover {
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(232, 213, 183, 0.04);
+    }
+    .sidebar-item.active {
+      color: var(--academy-gold);
+      background: rgba(232, 213, 183, 0.06);
+    }
+    .sidebar-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.3rem;
+      bottom: 0.3rem;
+      width: 2px;
+      background: var(--academy-gold);
+      border-radius: 1px;
+    }
+    .sidebar-badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--academy-gold);
+      background: var(--academy-gold-dim);
+      padding: 0.1rem 0.45rem;
+      border-radius: 99px;
+      margin-left: auto;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Main Content Area
+       ════════════════════════════════════════════════════════════════ */
+    .academy-main {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .academy-main > * {
+      width: 100%;
+      max-width: 900px;
+    }
+
+    /* Page header */
+    .page-header {
+      margin-bottom: 2rem;
+    }
+    .page-date {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      color: rgba(232, 213, 183, 0.4);
+      margin-bottom: 0.5rem;
+    }
+    .page-title {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.01em;
+      margin-bottom: 0.4rem;
+    }
+    .page-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 600px;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Intel Stats Cards
+       ════════════════════════════════════════════════════════════════ */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+    }
+    .stat-card {
+      background: rgba(17, 17, 17, 0.5);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.1rem;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover {
+      border-color: rgba(232, 213, 183, 0.12);
+    }
+    .stat-value {
+      font-family: var(--font-serif);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--academy-gold);
+      line-height: 1.2;
+    }
+    .stat-label {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+    .stat-change {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 0.3rem;
+    }
+    .stat-change.up {
+      color: #4ade80;
+    }
+    .stat-change.down {
+      color: #f87171;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Poll Card
+       ════════════════════════════════════════════════════════════════ */
+    .poll-card {
+      background: rgba(17, 17, 17, 0.5);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 1.3rem;
+      margin-bottom: 2rem;
+    }
+    .poll-question {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+    .poll-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .poll-option {
+      position: relative;
+      border-radius: var(--radius-md);
+      padding: 0.65rem 0.9rem;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+    .poll-option:hover {
+      border-color: rgba(232, 213, 183, 0.12);
+    }
+    .poll-bar {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      background: var(--academy-gold-dim);
+      border-radius: var(--radius-md);
+      transition: width 0.5s ease;
+    }
+    .poll-option-text {
+      position: relative;
+      z-index: 1;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-main);
+    }
+    .poll-option-pct {
+      position: relative;
+      z-index: 1;
+      margin-left: auto;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--academy-gold);
+    }
+    .poll-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.8rem;
+    }
+
+    /* Page greeting */
+    .page-greeting {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 600px;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Demo Content Cards
+       ════════════════════════════════════════════════════════════════ */
+    .demo-section-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(232, 213, 183, 0.35);
+      margin-bottom: 1rem;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .content-card {
+      background: rgba(17, 17, 17, 0.6);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 1.3rem;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+    .content-card:hover {
+      border-color: rgba(232, 213, 183, 0.15);
+      background: rgba(22, 22, 22, 0.8);
+      transform: translateY(-2px);
+    }
+    .content-card-tag {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--academy-gold);
+      margin-bottom: 0.5rem;
+    }
+    .content-card-title {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      line-height: 1.4;
+    }
+    .content-card-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .content-card-meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 0.8rem;
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.35);
+    }
+    .content-card-meta i {
+      margin-right: 0.2rem;
+    }
+
+    /* Full-width card */
+    .content-card-wide {
+      grid-column: span 2;
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+    }
+    .content-card-wide .card-wide-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: var(--radius-md);
+      background: var(--academy-gold-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .content-card-wide .card-wide-icon i {
+      font-size: 1.5rem;
+      color: var(--academy-gold);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Demo: State Switcher (for design review)
+       ════════════════════════════════════════════════════════════════ */
+    .demo-controls {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .demo-btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      border: 1px solid rgba(232, 213, 183, 0.2);
+      border-radius: var(--radius-md);
+      background: rgba(17, 17, 17, 0.95);
+      color: var(--academy-gold);
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(8px);
+    }
+    .demo-btn:hover {
+      background: rgba(232, 213, 183, 0.1);
+      border-color: rgba(232, 213, 183, 0.3);
+    }
+    .demo-btn.active {
+      background: var(--academy-gold);
+      color: #1a1a1a;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       State Variations
+       ════════════════════════════════════════════════════════════════ */
+
+    /* — Non-member viewing academy */
+    .state-guest .sidebar-member-card {
+      background: rgba(255,255,255,0.03);
+      border-color: var(--glass-border);
+    }
+    .state-guest .sidebar-avatar {
+      background: rgba(255,255,255,0.08);
+      color: var(--text-muted);
+    }
+    .state-guest .sidebar-member-tier {
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.05);
+      border-color: var(--glass-border);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Animations
+       ════════════════════════════════════════════════════════════════ */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .content-card {
+      animation: fadeInUp 0.4s ease both;
+    }
+    .content-card:nth-child(1) { animation-delay: 0.05s; }
+    .content-card:nth-child(2) { animation-delay: 0.1s; }
+    .content-card:nth-child(3) { animation-delay: 0.15s; }
+    .content-card:nth-child(4) { animation-delay: 0.2s; }
+    .content-card:nth-child(5) { animation-delay: 0.25s; }
+
+    /* ════════════════════════════════════════════════════════════════
+       Scrollbar
+       ════════════════════════════════════════════════════════════════ */
+    .academy-sidebar::-webkit-scrollbar { width: 3px; }
+    .academy-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .academy-sidebar::-webkit-scrollbar-thumb {
+      background: rgba(232, 213, 183, 0.15);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- ════════════════════════════════════════════════════════════════
+       Top Navigation
+       ════════════════════════════════════════════════════════════════ -->
+  <nav class="top-nav">
+    <div class="nav-left"></div>
+
+    <div class="nav-center">
+      <div class="nav-divider"></div>
+      <div class="nav-brand-name"><a href="#">知更鸟</a></div>
+      <div class="nav-divider"></div>
+    </div>
+
+    <div class="nav-right">
+      <a class="nav-link" href="#">首页</a>
+      <a class="nav-link" href="#">AI文章</a>
+      <a class="nav-link" href="#">提示词</a>
+      <div class="nav-dropdown">
+        <a class="nav-link nav-dropdown-trigger">
+          热榜 <i class="bi bi-chevron-down nav-dropdown-arrow"></i>
+        </a>
+        <div class="nav-dropdown-menu">
+          <a class="nav-dropdown-item"><i class="bi bi-github" style="color:#58a6ff"></i><span>GitHub Trending</span></a>
+          <a class="nav-dropdown-item"><i class="bi bi-rocket-takeoff" style="color:#ff6154"></i><span>ProductHunt</span></a>
+        </div>
+      </div>
+      <a class="nav-link academy-link active" href="#">学社</a>
+      <button class="nav-auth-btn">
+        <i class="bi bi-person"></i> 登录
+      </button>
+    </div>
+  </nav>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       Academy Layout: Sidebar + Content
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="academy-layout">
+
+    <!-- Sidebar -->
+    <aside class="academy-sidebar">
+      <!-- Member Card -->
+      <div class="sidebar-member-card">
+        <div class="sidebar-avatar">G</div>
+        <div class="sidebar-member-name">Grank</div>
+        <div class="sidebar-member-tier">
+          <i class="bi bi-gem"></i> 资深社员
+        </div>
+        <div class="sidebar-member-expiry">有效期至 2027.04.15</div>
+      </div>
+
+      <!-- Navigation Groups -->
+      <a class="sidebar-item active">
+        <i class="bi bi-house"></i> 学社首页
+      </a>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">信息</div>
+        <a class="sidebar-item">
+          <i class="bi bi-lightning"></i> 信息流
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-file-earmark-bar-graph"></i> 研报
+          <span class="sidebar-badge">6</span>
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-fire"></i> 热门叙事
+        </a>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">阅读</div>
+        <a class="sidebar-item">
+          <i class="bi bi-file-earmark-text"></i> 文章
+          <span class="sidebar-badge">86</span>
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-play-circle"></i> 视频
+          <span class="sidebar-badge">24</span>
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-journal-bookmark"></i> 书籍
+          <span class="sidebar-badge">8</span>
+        </a>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">共建</div>
+        <a class="sidebar-item">
+          <i class="bi bi-chat-square-text"></i> 讨论
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-check2-square"></i> 投票
+        </a>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">个人</div>
+        <a class="sidebar-item">
+          <i class="bi bi-clock-history"></i> 阅读记录
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-bookmark"></i> 我的收藏
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-pencil"></i> 笔记
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="academy-main">
+      <!-- ═══ Daily Date Header ═══ -->
+      <div class="page-header">
+        <div class="page-date">2026.04.30 · 周三</div>
+        <h1 class="page-title">Welcome back, Grank</h1>
+        <p class="page-greeting">你已加入学社 128 天，阅读了 12 篇文章、5 个视频、2 本书籍。本周新增了 3 篇文章。</p>
+      </div>
+
+      <!-- ═══ Intel Stats ═══ -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value">247</div>
+          <div class="stat-label">24h 信息采集</div>
+          <div class="stat-change up"><i class="bi bi-arrow-up-short"></i>12%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">3</div>
+          <div class="stat-label">新增研报</div>
+          <div class="stat-change"><i class="bi bi-dash"></i></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">86</div>
+          <div class="stat-label">信息流</div>
+          <div class="stat-change up"><i class="bi bi-arrow-up-short"></i>8%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">5</div>
+          <div class="stat-label">热门叙事</div>
+          <div class="stat-change"><i class="bi bi-dash"></i></div>
+        </div>
+      </div>
+
+      <!-- ═══ Editor's Pick ═══ -->
+      <div class="demo-section-label">编辑精选</div>
+      <div class="content-grid">
+        <div class="content-card content-card-wide">
+          <div class="card-wide-icon"><i class="bi bi-stars"></i></div>
+          <div>
+            <div class="content-card-tag">今日研报</div>
+            <div class="content-card-title">AI 研报：OpenAI 增长失速引发算力股抛售，微软联盟解体开启多云时代</div>
+            <div class="content-card-meta">
+              <span><i class="bi bi-file-earmark-text"></i> 46 篇来源</span>
+              <span><i class="bi bi-clock"></i> 12 分钟前</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Daily Highlights from each section ═══ -->
+      <div class="demo-section-label">今日动态</div>
+      <div class="content-grid">
+        <div class="content-card">
+          <div class="content-card-tag">阅读 · 文章</div>
+          <div class="content-card-title">AI 辅助编程工作流实战指南</div>
+          <div class="content-card-desc">Cursor、Claude Code、Copilot 的最佳实践与工作流设计</div>
+          <div class="content-card-meta">
+            <span><i class="bi bi-clock"></i> 10 分钟</span>
+            <span><i class="bi bi-eye"></i> 2.3k</span>
+          </div>
+        </div>
+        <div class="content-card">
+          <div class="content-card-tag">信息 · 信息流</div>
+          <div class="content-card-title">英伟达开源多模态模型 Cosmos</div>
+          <div class="content-card-desc">支持文本、图像、视频联合理解，面向具身智能场景</div>
+          <div class="content-card-meta">
+            <span><i class="bi bi-clock"></i> 08:42</span>
+            <span><i class="bi bi-fire"></i> 热度 156</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Active Polls ═══ -->
+      <div class="demo-section-label">共建投票</div>
+      <div class="poll-card">
+        <div class="poll-question">下一期研报优先覆盖哪个领域？</div>
+        <div class="poll-options">
+          <div class="poll-option">
+            <div class="poll-bar" style="width: 58%"></div>
+            <span class="poll-option-text">AI 应用层投资机会</span>
+            <span class="poll-option-pct">58%</span>
+          </div>
+          <div class="poll-option">
+            <div class="poll-bar" style="width: 26%"></div>
+            <span class="poll-option-text">Web3 基础设施进展</span>
+            <span class="poll-option-pct">26%</span>
+          </div>
+          <div class="poll-option">
+            <div class="poll-bar" style="width: 16%"></div>
+            <span class="poll-option-text">全球宏观与地缘风险</span>
+            <span class="poll-option-pct">16%</span>
+          </div>
+        </div>
+        <div class="poll-meta">32 人参与 · 还剩 2 天</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       Demo Controls — Switch states for design review
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="demo-controls">
+    <button class="demo-btn active" onclick="setState('member')">资深社员</button>
+    <button class="demo-btn" onclick="setState('founder')">创始社员</button>
+    <button class="demo-btn" onclick="setState('guest')">未加入</button>
+  </div>
+
+  <script>
+    // Sidebar active state
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+
+    // Demo state switcher
+    function setState(state) {
+      const layout = document.querySelector('.academy-layout');
+      const tier = document.querySelector('.sidebar-member-tier');
+      const expiry = document.querySelector('.sidebar-member-expiry');
+      const avatar = document.querySelector('.sidebar-avatar');
+      const title = document.querySelector('.page-title');
+      const greeting = document.querySelector('.page-greeting');
+
+      document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+
+      layout.classList.remove('state-guest');
+
+      if (state === 'member') {
+        tier.innerHTML = '<i class="bi bi-gem"></i> 资深社员';
+        expiry.textContent = '有效期至 2027.04.15';
+        title.textContent = 'Welcome back, Grank';
+        greeting.textContent = '你已加入学社 128 天，阅读了 12 篇文章、5 个视频、2 本书籍。本周新增了 3 篇文章。';
+        avatar.textContent = 'G';
+      } else if (state === 'founder') {
+        tier.innerHTML = '<i class="bi bi-stars"></i> 创始社员';
+        expiry.textContent = '永久有效';
+        title.textContent = 'Welcome back, Grank';
+        greeting.textContent = '作为创始社员，你拥有所有内容的终身访问权限。感谢你一路以来的支持。';
+        avatar.textContent = 'G';
+      } else if (state === 'guest') {
+        layout.classList.add('state-guest');
+        tier.innerHTML = '<i class="bi bi-lock"></i> 未加入';
+        expiry.textContent = '加入学社解锁全部内容';
+        title.textContent = '探索知更鸟学社';
+        greeting.textContent = '学社是知更鸟的会员社区，提供精选研报、深度文章和系统书籍。加入后即可解锁全部内容。';
+        avatar.textContent = '?';
+      }
+    }
+  </script>
+</body>
+</html>

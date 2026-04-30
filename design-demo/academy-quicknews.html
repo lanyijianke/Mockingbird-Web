@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>信息流 — 知更鸟学社</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Noto+Serif+SC:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <style>
+    /* ════════════════════════════════════════════════════════════════
+       Design Tokens — Academy Extension
+       ════════════════════════════════════════════════════════════════ */
+    :root {
+      /* Core palette (from main site) */
+      --primary: #C0F0FB;
+      --primary-hover: #9ae0ef;
+      --bg-main: #000000;
+      --bg-secondary: #111111;
+      --text-main: #f5f5f5;
+      --text-muted: #999999;
+      --glass-bg: rgba(17, 17, 17, 0.9);
+      --glass-border: rgba(255, 255, 255, 0.08);
+
+      /* Academy-specific palette */
+      --academy-gold: #E8D5B7;
+      --academy-gold-dim: rgba(232, 213, 183, 0.15);
+      --academy-gold-glow: rgba(232, 213, 183, 0.06);
+      --academy-warm: #F5EDE3;
+      --academy-sidebar-w: 260px;
+
+      /* Category colors — muted for dark theme */
+      --cat-ai: #6ECFDB;
+      --cat-ai-bg: rgba(110, 207, 219, 0.10);
+      --cat-ai-border: rgba(110, 207, 219, 0.18);
+      --cat-web3: #A78BDB;
+      --cat-web3-bg: rgba(167, 139, 219, 0.10);
+      --cat-web3-border: rgba(167, 139, 219, 0.18);
+      --cat-finance: #D4B87A;
+      --cat-finance-bg: rgba(212, 184, 122, 0.10);
+      --cat-finance-border: rgba(212, 184, 122, 0.18);
+
+      /* Typography */
+      --font-serif: "Playfair Display", "Noto Serif SC", Georgia, serif;
+      --font-sans: "DM Sans", "Noto Sans SC", -apple-system, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      --nav-height: 60px;
+      --radius-lg: 12px;
+      --radius-md: 8px;
+    }
+
+    /* ═══════ Reset ═══════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ════════════════════════════════════════════════════════════════
+       Top Navigation
+       ════════════════════════════════════════════════════════════════ */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.95);
+      border-bottom: 1px solid var(--glass-border);
+      height: var(--nav-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      backdrop-filter: blur(12px);
+    }
+
+    .nav-left { display: flex; align-items: center; gap: 1.2rem; }
+    .nav-center {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .nav-brand-name {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .nav-divider {
+      width: 80px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--glass-border), transparent);
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .nav-link {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.03em;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+    .nav-link:hover { color: var(--text-main); }
+    .nav-link.active { color: var(--text-main); }
+    .nav-link.academy-link.active {
+      color: var(--academy-gold);
+    }
+    .nav-dropdown { position: relative; }
+    .nav-dropdown-trigger {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      cursor: pointer;
+    }
+    .nav-dropdown-arrow {
+      font-size: 0.6rem;
+      transition: transform 0.25s ease;
+    }
+    .nav-dropdown:hover .nav-dropdown-arrow { transform: rotate(180deg); }
+    .nav-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 0.6rem);
+      right: 0;
+      min-width: 200px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 0.5rem 0;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-4px);
+      transition: all 0.2s ease;
+    }
+    .nav-dropdown:hover .nav-dropdown-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .nav-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .nav-dropdown-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+    .nav-auth-btn {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 0.35rem 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-auth-btn:hover {
+      color: var(--text-main);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Academy Page Layout — Sidebar + Content
+       ════════════════════════════════════════════════════════════════ */
+    .academy-layout {
+      display: flex;
+      min-height: calc(100vh - var(--nav-height));
+    }
+
+    /* Sidebar */
+    .academy-sidebar {
+      width: var(--academy-sidebar-w);
+      min-height: 100%;
+      border-right: 1px solid rgba(232, 213, 183, 0.06);
+      background: rgba(8, 6, 4, 0.5);
+      padding: 1.5rem 0;
+      flex-shrink: 0;
+      position: sticky;
+      top: var(--nav-height);
+      height: calc(100vh - var(--nav-height));
+      overflow-y: auto;
+    }
+
+    /* Member card in sidebar */
+    .sidebar-member-card {
+      margin: 0 1rem 1.5rem;
+      padding: 1rem;
+      background: var(--academy-gold-dim);
+      border: 1px solid rgba(232, 213, 183, 0.1);
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+    .sidebar-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--academy-gold), #C4A882);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin: 0 auto 0.6rem;
+    }
+    .sidebar-member-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.3rem;
+    }
+    .sidebar-member-tier {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--academy-gold);
+      background: rgba(232, 213, 183, 0.1);
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      border: 1px solid rgba(232, 213, 183, 0.15);
+    }
+    .sidebar-member-expiry {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+
+    /* Sidebar navigation groups */
+    .sidebar-group {
+      margin-bottom: 1.2rem;
+    }
+    .sidebar-group-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(232, 213, 183, 0.3);
+      padding: 0 1.3rem;
+      margin-bottom: 0.4rem;
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.55rem 1.3rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.5);
+      transition: all 0.2s;
+      cursor: pointer;
+      position: relative;
+    }
+    .sidebar-item i {
+      font-size: 0.95rem;
+      width: 18px;
+      text-align: center;
+    }
+    .sidebar-item:hover {
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(232, 213, 183, 0.04);
+    }
+    .sidebar-item.active {
+      color: var(--academy-gold);
+      background: rgba(232, 213, 183, 0.06);
+    }
+    .sidebar-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.3rem;
+      bottom: 0.3rem;
+      width: 2px;
+      background: var(--academy-gold);
+      border-radius: 1px;
+    }
+    .sidebar-badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--academy-gold);
+      background: var(--academy-gold-dim);
+      padding: 0.1rem 0.45rem;
+      border-radius: 99px;
+      margin-left: auto;
+    }
+
+    /* Sidebar scrollbar */
+    .academy-sidebar::-webkit-scrollbar { width: 3px; }
+    .academy-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .academy-sidebar::-webkit-scrollbar-thumb {
+      background: rgba(232, 213, 183, 0.15);
+      border-radius: 3px;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Main Content Area
+       ════════════════════════════════════════════════════════════════ */
+    .academy-main {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .academy-main > * {
+      width: 100%;
+      max-width: 960px;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Page Header — Quick News
+       ════════════════════════════════════════════════════════════════ */
+    .page-header {
+      margin-bottom: 2rem;
+    }
+    .page-header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+    .page-title {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.01em;
+      margin-bottom: 0.4rem;
+    }
+    .page-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      max-width: 560px;
+    }
+
+    /* Live stats bar */
+    .live-stats {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(17, 17, 17, 0.6);
+      border: 1px solid var(--glass-border);
+      border-radius: 99px;
+      padding: 0.45rem 1rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 0.3rem;
+    }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      position: relative;
+    }
+    .live-dot::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      background: rgba(74, 222, 128, 0.3);
+      animation: pulse-ring 2s ease-out infinite;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    .live-stats-count {
+      font-weight: 600;
+      color: var(--academy-gold);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Category Filter Tabs
+       ════════════════════════════════════════════════════════════════ */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1.2rem;
+      border-bottom: 1px solid var(--glass-border);
+      flex-wrap: wrap;
+    }
+    .filter-tab {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.4);
+      padding: 0.4rem 0.9rem;
+      border-radius: 99px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: none;
+      font-family: var(--font-sans);
+    }
+    .filter-tab:hover {
+      color: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .filter-tab.active {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--glass-border);
+    }
+    .filter-tab .tab-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
+    }
+    .filter-tab .tab-dot.all { background: var(--text-muted); }
+    .filter-tab .tab-dot.ai { background: var(--cat-ai); }
+    .filter-tab .tab-dot.web3 { background: var(--cat-web3); }
+    .filter-tab .tab-dot.finance { background: var(--cat-finance); }
+
+    .filter-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .filter-search {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      transition: color 0.2s;
+      background: none;
+      border: none;
+      font-family: var(--font-sans);
+      padding: 0.35rem;
+    }
+    .filter-search:hover {
+      color: rgba(255, 255, 255, 0.6);
+    }
+    .search-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .search-input {
+      width: 0;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: width 0.25s ease, padding 0.25s ease;
+    }
+    .search-wrap.open .search-input {
+      width: 160px;
+      padding: 0.35rem 0.6rem;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      background: rgba(17, 17, 17, 0.6);
+    }
+    .search-wrap.open .search-input:focus {
+      border-color: rgba(232, 213, 183, 0.25);
+    }
+    .sort-dropdown {
+      position: relative;
+      margin-left: 0.5rem;
+    }
+    .sort-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.35);
+      background: none;
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 0.35rem 0.7rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-sans);
+    }
+    .sort-btn:hover {
+      color: rgba(255, 255, 255, 0.6);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    .sort-btn i { font-size: 0.7rem; }
+    .sort-menu {
+      position: absolute;
+      top: calc(100% + 0.4rem);
+      right: 0;
+      min-width: 140px;
+      background: rgba(17, 17, 17, 0.98);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md);
+      padding: 0.4rem 0;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-4px);
+      transition: all 0.15s ease;
+      z-index: 10;
+    }
+    .sort-dropdown.open .sort-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+    .sort-option {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.8rem;
+      font-size: 0.78rem;
+      color: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sort-option:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+    .sort-option.active {
+      color: var(--academy-gold);
+    }
+    .sort-option.active::before {
+      content: '✓';
+      font-size: 0.7rem;
+      margin-right: -0.1rem;
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Date Separator
+       ════════════════════════════════════════════════════════════════ */
+    .date-separator {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 1.8rem 0 1rem;
+    }
+    .date-separator-text {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(232, 213, 183, 0.4);
+      white-space: nowrap;
+    }
+    .date-separator-line {
+      flex: 1;
+      height: 1px;
+      background: var(--glass-border);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       News Feed Items
+       ════════════════════════════════════════════════════════════════ */
+    .feed-item {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      animation: feedFadeIn 0.35s ease both;
+    }
+    .feed-item:last-child {
+      border-bottom: none;
+    }
+    .feed-item:hover {
+      background: rgba(232, 213, 183, 0.02);
+      margin: 0 -1rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
+      border-radius: var(--radius-md);
+    }
+
+    /* Timeline rail */
+    .feed-time-col {
+      width: 48px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 0.15rem;
+    }
+    .feed-time {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.3);
+      font-family: var(--font-mono);
+      letter-spacing: 0.02em;
+    }
+
+    /* Content column */
+    .feed-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .feed-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+    }
+
+    /* Category tag */
+    .feed-cat {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.15rem 0.55rem;
+      border-radius: 3px;
+      line-height: 1.4;
+    }
+    .feed-cat.ai {
+      color: var(--cat-ai);
+      background: var(--cat-ai-bg);
+      border: 1px solid var(--cat-ai-border);
+    }
+    .feed-cat.web3 {
+      color: var(--cat-web3);
+      background: var(--cat-web3-bg);
+      border: 1px solid var(--cat-web3-border);
+    }
+    .feed-cat.finance {
+      color: var(--cat-finance);
+      background: var(--cat-finance-bg);
+      border: 1px solid var(--cat-finance-border);
+    }
+
+    /* New badge */
+    .feed-new {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #4ade80;
+      background: rgba(74, 222, 128, 0.1);
+      border: 1px solid rgba(74, 222, 128, 0.2);
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+    }
+
+    .feed-headline {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text-main);
+      line-height: 1.5;
+      margin-bottom: 0.25rem;
+      transition: color 0.15s;
+    }
+    .feed-item:hover .feed-headline {
+      color: var(--academy-warm);
+    }
+    .feed-summary {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 0.35rem;
+    }
+    .feed-reason {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.35rem;
+      font-size: 0.74rem;
+      color: rgba(232, 213, 183, 0.55);
+      line-height: 1.5;
+      margin-bottom: 0.4rem;
+      padding: 0.4rem 0.6rem;
+      background: rgba(232, 213, 183, 0.04);
+      border-radius: var(--radius-sm);
+      border-left: 2px solid rgba(232, 213, 183, 0.15);
+    }
+    .feed-reason i {
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+    .feed-footer {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.25);
+    }
+    .feed-footer .feed-source-link {
+      font-size: 0.7rem;
+      color: rgba(232, 213, 183, 0.4);
+      background: none;
+      border: none;
+      padding: 0;
+    }
+    .feed-footer .feed-source-link:hover {
+      color: var(--academy-gold);
+    }
+    .feed-score {
+      color: rgba(232, 213, 183, 0.5);
+      font-weight: 500;
+    }
+    .feed-score {
+      font-size: 0.72rem;
+      color: rgba(232, 213, 183, 0.45);
+      margin-top: 0.2rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+    .feed-score i { font-size: 0.7rem; }
+    .feed-detail-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.2);
+      margin-top: 0.5rem;
+    }
+    .feed-detail-actions .feed-source-link {
+      color: rgba(232, 213, 183, 0.5);
+      background: rgba(232, 213, 183, 0.05);
+      padding: 0.2rem 0.55rem;
+      border-radius: 99px;
+      border: 1px solid rgba(232, 213, 183, 0.1);
+    }
+    .feed-detail-actions .feed-source-link:hover {
+      color: var(--academy-gold);
+      border-color: rgba(232, 213, 183, 0.25);
+    }
+
+    /* Expand arrow on hover */
+    .feed-expand {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0;
+      transition: all 0.25s;
+      color: var(--academy-gold);
+      font-size: 0.7rem;
+    }
+    .feed-item:hover .feed-expand {
+      opacity: 0.4;
+    }
+    .feed-item.expanded .feed-expand {
+      opacity: 0.6;
+      transform: translateY(-50%) rotate(90deg);
+    }
+
+    /* Inline expanded detail */
+    .feed-detail {
+      display: none;
+      padding: 0.8rem 0 0;
+      border-top: 1px solid rgba(232, 213, 183, 0.06);
+      margin-top: 0.6rem;
+    }
+    .feed-item.expanded .feed-detail {
+      display: block;
+      animation: fadeInUp 0.2s ease both;
+    }
+    .feed-detail-text {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.75;
+      margin-bottom: 0.7rem;
+    }
+    .feed-sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.5rem;
+    }
+    .feed-source-link {
+      font-size: 0.7rem;
+      color: rgba(232, 213, 183, 0.45);
+      background: rgba(232, 213, 183, 0.04);
+      padding: 0.2rem 0.5rem;
+      border-radius: 99px;
+      border: 1px solid rgba(232, 213, 183, 0.08);
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .feed-source-link:hover {
+      color: var(--academy-gold);
+      border-color: rgba(232, 213, 183, 0.2);
+    }
+    .feed-detail-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.68rem;
+      color: rgba(255,255,255,0.2);
+    }
+
+    /* Stagger animation */
+    @keyframes feedFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .feed-item:nth-child(1) { animation-delay: 0.03s; }
+    .feed-item:nth-child(2) { animation-delay: 0.06s; }
+    .feed-item:nth-child(3) { animation-delay: 0.09s; }
+    .feed-item:nth-child(4) { animation-delay: 0.12s; }
+    .feed-item:nth-child(5) { animation-delay: 0.15s; }
+    .feed-item:nth-child(6) { animation-delay: 0.18s; }
+    .feed-item:nth-child(7) { animation-delay: 0.21s; }
+    .feed-item:nth-child(8) { animation-delay: 0.24s; }
+    .feed-item:nth-child(9) { animation-delay: 0.27s; }
+    .feed-item:nth-child(10) { animation-delay: 0.30s; }
+    .feed-item:nth-child(11) { animation-delay: 0.33s; }
+    .feed-item:nth-child(12) { animation-delay: 0.36s; }
+    .feed-item:nth-child(13) { animation-delay: 0.39s; }
+    .feed-item:nth-child(14) { animation-delay: 0.42s; }
+    .feed-item:nth-child(15) { animation-delay: 0.45s; }
+    .feed-item:nth-child(16) { animation-delay: 0.48s; }
+    .feed-item:nth-child(17) { animation-delay: 0.51s; }
+    .feed-item:nth-child(18) { animation-delay: 0.54s; }
+
+    /* ════════════════════════════════════════════════════════════════
+       Infinite Scroll Sentinel
+       ════════════════════════════════════════════════════════════════ */
+    .scroll-sentinel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 2rem;
+      font-size: 0.78rem;
+      color: rgba(232, 213, 183, 0.3);
+    }
+    .scroll-sentinel.hidden { display: none; }
+    .scroll-spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(232, 213, 183, 0.1);
+      border-top-color: rgba(232, 213, 183, 0.4);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body>
+  <!-- ════════════════════════════════════════════════════════════════
+       Top Navigation
+       ════════════════════════════════════════════════════════════════ -->
+  <nav class="top-nav">
+    <div class="nav-left"></div>
+
+    <div class="nav-center">
+      <div class="nav-divider"></div>
+      <div class="nav-brand-name"><a href="#">知更鸟</a></div>
+      <div class="nav-divider"></div>
+    </div>
+
+    <div class="nav-right">
+      <a class="nav-link" href="#">首页</a>
+      <a class="nav-link" href="#">AI文章</a>
+      <a class="nav-link" href="#">提示词</a>
+      <div class="nav-dropdown">
+        <a class="nav-link nav-dropdown-trigger">
+          热榜 <i class="bi bi-chevron-down nav-dropdown-arrow"></i>
+        </a>
+        <div class="nav-dropdown-menu">
+          <a class="nav-dropdown-item"><i class="bi bi-github" style="color:#58a6ff"></i><span>GitHub Trending</span></a>
+          <a class="nav-dropdown-item"><i class="bi bi-rocket-takeoff" style="color:#ff6154"></i><span>ProductHunt</span></a>
+        </div>
+      </div>
+      <a class="nav-link academy-link active" href="#">学社</a>
+      <button class="nav-auth-btn">
+        <i class="bi bi-person"></i> 登录
+      </button>
+    </div>
+  </nav>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       Academy Layout: Sidebar + Content
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="academy-layout">
+
+    <!-- Sidebar -->
+    <aside class="academy-sidebar">
+      <!-- Member Card -->
+      <div class="sidebar-member-card">
+        <div class="sidebar-avatar">G</div>
+        <div class="sidebar-member-name">Grank</div>
+        <div class="sidebar-member-tier">
+          <i class="bi bi-gem"></i> 资深社员
+        </div>
+        <div class="sidebar-member-expiry">有效期至 2027.04.15</div>
+      </div>
+
+      <!-- Navigation Groups -->
+      <a class="sidebar-item" href="academy-nav.html">
+        <i class="bi bi-house"></i> 学社首页
+      </a>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">信息</div>
+        <a class="sidebar-item active">
+          <i class="bi bi-star"></i> 信息流
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-file-earmark-bar-graph"></i> 研报
+          <span class="sidebar-badge">6</span>
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-fire"></i> 热门叙事
+        </a>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">阅读</div>
+        <a class="sidebar-item">
+          <i class="bi bi-file-earmark-text"></i> 文章
+          <span class="sidebar-badge">86</span>
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-play-circle"></i> 视频
+          <span class="sidebar-badge">24</span>
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-journal-bookmark"></i> 书籍
+          <span class="sidebar-badge">8</span>
+        </a>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">共建</div>
+        <a class="sidebar-item">
+          <i class="bi bi-chat-square-text"></i> 讨论
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-check2-square"></i> 投票
+        </a>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">个人</div>
+        <a class="sidebar-item">
+          <i class="bi bi-clock-history"></i> 阅读记录
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-bookmark"></i> 我的收藏
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-pencil"></i> 笔记
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="academy-main">
+
+      <!-- ═══ Page Header ═══ -->
+      <div class="page-header">
+        <div class="page-header-top">
+          <div>
+            <h1 class="page-title">信息流</h1>
+            <p class="page-desc">AI 从全球信息源中实时分拣的高价值资讯，与社员共享信息源。每条内容均由 AI 筛选并附评分与入选理由，只留值得你花时间关注的信息。</p>
+          </div>
+          <div class="live-stats">
+            <span class="live-dot"></span>
+            今日已收录 <span class="live-stats-count">86</span> 条
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Category Filter ═══ -->
+      <div class="filter-bar">
+        <button class="filter-tab active" data-cat="all">
+          <span class="tab-dot all"></span>全部
+        </button>
+        <button class="filter-tab" data-cat="ai">
+          <span class="tab-dot ai"></span>AI
+        </button>
+        <button class="filter-tab" data-cat="web3">
+          <span class="tab-dot web3"></span>Web3
+        </button>
+        <button class="filter-tab" data-cat="finance">
+          <span class="tab-dot finance"></span>Finance
+        </button>
+        <div class="filter-right">
+          <div class="sort-dropdown" id="sortDropdown">
+            <button class="sort-btn" id="sortBtn">
+              <i class="bi bi-sort-down"></i> 按时间
+            </button>
+            <div class="sort-menu">
+              <div class="sort-option active" data-sort="time">按时间</div>
+              <div class="sort-option" data-sort="score">按评分</div>
+            </div>
+          </div>
+          <div class="search-wrap" id="searchWrap">
+            <button class="filter-search" id="searchToggle">
+              <i class="bi bi-search"></i>
+            </button>
+            <input class="search-input" id="searchInput" type="text" placeholder="搜索信息流..." />
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════
+           Feed: Today
+           ════════════════════════════════════════════════════════════ -->
+      <div class="date-separator">
+        <span class="date-separator-text">今天 · 04.30</span>
+        <div class="date-separator-line"></div>
+      </div>
+
+      <div class="feed-list" id="feed-today">
+
+        <div class="feed-item" data-cat="ai">
+          <div class="feed-time-col">
+            <span class="feed-time">14:32</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat ai">AI</span>
+              <span class="feed-new">NEW</span>
+            </div>
+            <div class="feed-headline">Anthropic 发布 Claude 4 Opus，多模态推理能力大幅提升</div>
+            <div class="feed-summary">新模型在数学推理和代码生成基准上分别提升 23% 和 18%，支持原生图像输出与工具链调用。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 头部模型厂商重大版本发布，对行业格局有直接影响</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 9.2</span>
+            <div class="feed-detail">
+              <div class="feed-detail-text">Anthropic 正式发布 Claude 4 Opus 模型，这是其旗舰模型的第四次重大迭代。新模型在数学推理基准上提升 23%，代码生成提升 18%，首次支持原生图像输出和多步骤工具链调用。API 定价与上一代持平，但推理效率提升约 30%。多位独立测试者报告其在复杂编程任务上已接近人类专家水平。</div>
+              <div class="feed-detail-actions">
+                <a class="feed-source-link" href="#"><i class="bi bi-box-arrow-up-right"></i> 查看原文</a>
+                <span><i class="bi bi-clock"></i> 首次采集 14:28</span>
+                <span><i class="bi bi-arrow-repeat"></i> 最后更新 14:32</span>
+              </div>
+            </div>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="web3">
+          <div class="feed-time-col">
+            <span class="feed-time">14:15</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat web3">WEB3</span>
+              <span class="feed-new">NEW</span>
+            </div>
+            <div class="feed-headline">以太坊 Pectra 升级正式激活，账户抽象全面落地</div>
+            <div class="feed-summary">EIP-7702 允许 EOA 临时委托代码，Gas 代付与批量交易成为标准功能。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 以太坊主网重大协议升级，将改变 DApp 用户体验范式</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 9.0</span>
+            <div class="feed-detail">
+              <div class="feed-detail-text">以太坊 Pectra 升级在北京时间 14:00 左右正式激活。本次升级包含 EIP-7702，允许 EOA 账户临时委托智能合约代码，实现 Gas 代付、批量交易、权限管理等账户抽象功能。多个钱包已宣布支持，MetaMask 和 Rainbow 将在下周推出更新版本。DeFi 协议 Aave 和 Uniswap 已开始适配新的批量交易接口。</div>
+              <div class="feed-detail-actions">
+                <a class="feed-source-link" href="#"><i class="bi bi-box-arrow-up-right"></i> 查看原文</a>
+                <span><i class="bi bi-clock"></i> 首次采集 14:10</span>
+                <span><i class="bi bi-arrow-repeat"></i> 最后更新 14:15</span>
+              </div>
+            </div>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="finance">
+          <div class="feed-time-col">
+            <span class="feed-time">13:48</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat finance">FINANCE</span>
+              <span class="feed-new">NEW</span>
+            </div>
+            <div class="feed-headline">美联储 5 月议息会议维持利率不变，释放偏鸽信号</div>
+            <div class="feed-summary">鲍威尔暗示若通胀数据持续改善，6 月可能启动降息。美股期货短线拉升。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 全球流动性关键节点，鸽派信号将直接影响风险资产定价</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 9.4</span>
+            <div class="feed-detail">
+              <div class="feed-detail-text">美联储 5 月 FOMC 会议决定维持联邦基金利率在 4.25%-4.50% 区间不变，符合市场预期。鲍威尔在新闻发布会上表示「通胀正在朝正确方向移动」，暗示若接下来的 CPI 和 PCE 数据持续改善，6 月会议可能启动降息。会议声明中删除了「通胀仍然偏高」的措辞，市场解读为明显偏鸽。美股期货在声明发布后短线拉升，纳指期货涨 0.8%，10 年期美债收益率下行 5bp 至 4.18%。</div>
+              <div class="feed-detail-actions">
+                <a class="feed-source-link" href="#"><i class="bi bi-box-arrow-up-right"></i> 查看原文</a>
+                <span><i class="bi bi-clock"></i> 首次采集 13:40</span>
+                <span><i class="bi bi-arrow-repeat"></i> 最后更新 13:48</span>
+              </div>
+            </div>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="ai">
+          <div class="feed-time-col">
+            <span class="feed-time">12:20</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat ai">AI</span>
+            </div>
+            <div class="feed-headline">Google DeepMind 开源 Gemma 3，27B 参数模型支持 128K 上下文</div>
+            <div class="feed-summary">模型权重发布于 HuggingFace，性能接近 Gemini 2.0 Flash，商用友好许可证。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 开源模型生态重要补充，降低中小企业 AI 部署门槛</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 8.1</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="web3">
+          <div class="feed-time-col">
+            <span class="feed-time">11:55</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat web3">WEB3</span>
+            </div>
+            <div class="feed-headline">Solana ETF 申请获 SEC 正式受理，审批流程进入 240 天倒计时</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 加密资产合规化标志性事件，可能开启新一波机构资金入场</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 8.8</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="finance">
+          <div class="feed-time-col">
+            <span class="feed-time">11:30</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat finance">FINANCE</span>
+            </div>
+            <div class="feed-headline">日元跌破 160 关口，日本央行紧急会议讨论干预方案</div>
+            <div class="feed-summary">市场担忧日本当局将进行新一轮外汇干预，日元空头头寸激增至 6 个月高位。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 外汇市场重大异动，套息交易逆转风险可能波及全球风险资产</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 8.5</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="ai">
+          <div class="feed-time-col">
+            <span class="feed-time">10:42</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat ai">AI</span>
+            </div>
+            <div class="feed-headline">字节跳动豆包大模型日均调用量突破 10 亿次，企业客户环比增长 340%</div>
+            <div class="feed-summary">国内企业端 AI 采用率加速，制造业和客服场景渗透最快。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 国内 AI 商业化落地标杆数据，反映企业端真实需求强度</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 7.6</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="web3">
+          <div class="feed-time-col">
+            <span class="feed-time">09:58</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat web3">WEB3</span>
+            </div>
+            <div class="feed-headline">Uniswap V4 正式上线主网，Hooks 机制开启定制化 AMM 时代</div>
+            <div class="feed-summary">开发者可通过 Hooks 插件自定义流动性池逻辑，首个动态手续费 Hook 已部署。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> DeFi 基础设施重大升级，Hooks 可能催生新的流动性创新范式</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 8.3</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="finance">
+          <div class="feed-time-col">
+            <span class="feed-time">09:15</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat finance">FINANCE</span>
+            </div>
+            <div class="feed-headline">港股 AI 板块集体拉升，中芯国际单日涨幅超 12%</div>
+            <div class="feed-summary">受算力需求预期驱动，半导体及 AI 算力标的获南向资金大幅净买入。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 港股 AI 算力链条异动明显，资金面信号值得跟踪</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 7.2</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="ai">
+          <div class="feed-time-col">
+            <span class="feed-time">08:30</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat ai">AI</span>
+            </div>
+            <div class="feed-headline">Meta 发布 Llama 4 Scout 与 Maverick，首次引入混合专家架构</div>
+            <div class="feed-summary">Scout 支持 1000 万 token 上下文窗口，Maverick 在同等参数下性能超越 GPT-4o。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> Meta 开源模型重大迭代，MoE 架构可能重塑开源模型竞争格局</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 9.1</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="web3">
+          <div class="feed-time-col">
+            <span class="feed-time">07:45</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat web3">WEB3</span>
+            </div>
+            <div class="feed-headline">比特币现货 ETF 连续 5 日净流入，累计规模突破 1200 亿美元</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 机构资金持续进场，比特币市场结构正在发生根本性变化</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 7.8</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="ai">
+          <div class="feed-time-col">
+            <span class="feed-time">06:50</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat ai">AI</span>
+            </div>
+            <div class="feed-headline">苹果 WWDC 2026 预览：Siri 全面接入端侧大模型，支持第三方 Agent 调用</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 苹果 AI 战略方向性信号，端侧模型部署可能改变应用生态格局</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 7.5</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════
+           Feed: Yesterday
+           ════════════════════════════════════════════════════════════ -->
+      <div class="date-separator">
+        <span class="date-separator-text">昨天 · 04.29</span>
+        <div class="date-separator-line"></div>
+      </div>
+
+      <div class="feed-list" id="feed-yesterday">
+
+        <div class="feed-item" data-cat="ai">
+          <div class="feed-time-col">
+            <span class="feed-time">22:10</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat ai">AI</span>
+            </div>
+            <div class="feed-headline">OpenAI o3 模型上线 ChatGPT，Pro 用户每日限额 100 次</div>
+            <div class="feed-summary">推理模型首次面向 C 端用户开放，支持「深度思考」模式自动拆解复杂任务。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> OpenAI 推理模型 C 端落地，AI 产品形态可能出现重大变化</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 9.3</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="finance">
+          <div class="feed-time-col">
+            <span class="feed-time">20:35</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat finance">FINANCE</span>
+            </div>
+            <div class="feed-headline">英伟达 Q1 财报营收 441 亿美元，同比增长 69%，数据中心业务再创新高</div>
+            <div class="feed-summary">Blackwell 架构 GPU 出货量环比翻倍，但指引低于华尔街最乐观预期，盘后微跌。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> AI 算力产业链核心公司财报，直接影响全球科技股估值锚</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 9.5</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="web3">
+          <div class="feed-time-col">
+            <span class="feed-time">18:20</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat web3">WEB3</span>
+            </div>
+            <div class="feed-headline">Vitalik 提出「The Splurge」路线图更新，聚焦账户抽象与跨链互操作</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 以太坊创始人直接提出的路线图变更，对 L2 生态发展方向有指引意义</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 7.8</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="ai">
+          <div class="feed-time-col">
+            <span class="feed-time">16:45</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat ai">AI</span>
+            </div>
+            <div class="feed-headline">百度发布文心 5.0，中文理解能力首次在 SuperCLUE 基准超越 GPT-4o</div>
+            <div class="feed-summary">模型集成飞桨 3.0 框架，推理速度提升 40%，企业 API 定价下调 30%。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 国内大模型中文能力首次超越 GPT-4o，价格战可能加速行业洗牌</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 7.9</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="finance">
+          <div class="feed-time-col">
+            <span class="feed-time">14:50</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat finance">FINANCE</span>
+            </div>
+            <div class="feed-headline">中国 4 月制造业 PMI 回落至 49.8，再度跌破荣枯线</div>
+            <div class="feed-summary">新出口订单分项降至 47.2，贸易摩擦影响开始显现，分析师预期政策加码。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 宏观数据跌破关键阈值，可能触发政策对冲，影响 A 股和商品市场</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 7.4</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════════
+           Feed: Day Before
+           ════════════════════════════════════════════════════════════ -->
+      <div class="date-separator">
+        <span class="date-separator-text">04.28</span>
+        <div class="date-separator-line"></div>
+      </div>
+
+      <div class="feed-list" id="feed-0428">
+
+        <div class="feed-item" data-cat="web3">
+          <div class="feed-time-col">
+            <span class="feed-time">21:30</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat web3">WEB3</span>
+            </div>
+            <div class="feed-headline">Circle IPO 定价每股 31 美元，估值 68 亿美元，为稳定币赛道最大上市案</div>
+            <div class="feed-summary">USDC 市值突破 600 亿，Circle 2025 年 Q1 营收同比增长 57%。</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 稳定币赛道最大 IPO，标志加密基础设施正式进入传统资本市场</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 8.6</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="ai">
+          <div class="feed-time-col">
+            <span class="feed-time">19:15</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat ai">AI</span>
+            </div>
+            <div class="feed-headline">Mistral 发布 Pixtral Large 2，多模态模型首次支持中文 OCR 与表格理解</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 欧洲头部 AI 公司多模态能力补齐，中文支持拓展亚洲市场潜力</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 7.1</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+        <div class="feed-item" data-cat="finance">
+          <div class="feed-time-col">
+            <span class="feed-time">17:00</span>
+          </div>
+          <div class="feed-content">
+            <div class="feed-meta-row">
+              <span class="feed-cat finance">FINANCE</span>
+            </div>
+            <div class="feed-headline">黄金突破 3500 美元/盎司再创历史新高，全球央行购金需求持续旺盛</div>
+            <div class="feed-reason"><i class="bi bi-robot"></i> 避险资产持续走强反映全球不确定性加深，与 AI/Web3 风险偏好形成对冲信号</div>
+            <span class="feed-score"><i class="bi bi-star"></i> 8.4</span>
+          </div>
+          <i class="bi bi-chevron-right feed-expand"></i>
+        </div>
+
+      </div>
+
+      <!-- ═══ Infinite Scroll Sentinel ═══ -->
+      <div class="scroll-sentinel" id="scrollSentinel">
+        <div class="scroll-spinner"></div>
+        <span>加载中...</span>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ════════════════════════════════════════════════════════════════
+    // Feed Item Click to Expand (Twitter-style)
+    // ════════════════════════════════════════════════════════════════
+    document.querySelectorAll('.feed-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const wasExpanded = item.classList.contains('expanded');
+        // Collapse all others
+        document.querySelectorAll('.feed-item.expanded').forEach(i => {
+          if (i !== item) i.classList.remove('expanded');
+        });
+        item.classList.toggle('expanded', !wasExpanded);
+      });
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // Category Filter + Sort Reset
+    // ════════════════════════════════════════════════════════════════
+    const filterTabs = document.querySelectorAll('.filter-tab');
+    const allFeedItems = document.querySelectorAll('.feed-item');
+    let currentSort = 'time';
+
+    function resetSort() {
+      currentSort = 'time';
+      document.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+      document.querySelector('.sort-option[data-sort="time"]').classList.add('active');
+      document.getElementById('sortBtn').innerHTML = '<i class="bi bi-sort-down"></i> 按时间';
+      // Reset DOM order
+      document.querySelectorAll('.feed-list').forEach(list => {
+        const items = Array.from(list.querySelectorAll('.feed-item'));
+        items.sort((a, b) => {
+          const timeA = a.querySelector('.feed-time')?.textContent || '';
+          const timeB = b.querySelector('.feed-time')?.textContent || '';
+          return timeB.localeCompare(timeA);
+        });
+        items.forEach(item => list.appendChild(item));
+      });
+    }
+
+    filterTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        filterTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+
+        const cat = tab.dataset.cat;
+
+        allFeedItems.forEach(item => {
+          if (cat === 'all' || item.dataset.cat === cat) {
+            item.style.display = '';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+
+        document.querySelectorAll('.date-separator').forEach(sep => {
+          const nextList = sep.nextElementSibling;
+          if (nextList && nextList.classList.contains('feed-list')) {
+            const visibleItems = nextList.querySelectorAll('.feed-item:not([style*="display: none"])');
+            sep.style.display = visibleItems.length > 0 ? '' : 'none';
+          }
+        });
+
+        // Reset sort when switching category
+        resetSort();
+      });
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // Search Toggle + Live Filter
+    // ════════════════════════════════════════════════════════════════
+    const searchWrap = document.getElementById('searchWrap');
+    const searchToggle = document.getElementById('searchToggle');
+    const searchInput = document.getElementById('searchInput');
+
+    searchToggle.addEventListener('click', () => {
+      searchWrap.classList.toggle('open');
+      if (searchWrap.classList.contains('open')) {
+        searchInput.focus();
+      } else {
+        searchInput.value = '';
+        // Reset visibility
+        allFeedItems.forEach(item => item.style.display = '');
+        document.querySelectorAll('.date-separator').forEach(sep => sep.style.display = '');
+      }
+    });
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.toLowerCase().trim();
+      allFeedItems.forEach(item => {
+        const headline = item.querySelector('.feed-headline')?.textContent.toLowerCase() || '';
+        const summary = item.querySelector('.feed-summary')?.textContent.toLowerCase() || '';
+        const match = !q || headline.includes(q) || summary.includes(q);
+        item.style.display = match ? '' : 'none';
+      });
+      document.querySelectorAll('.date-separator').forEach(sep => {
+        const nextList = sep.nextElementSibling;
+        if (nextList && nextList.classList.contains('feed-list')) {
+          const visibleItems = nextList.querySelectorAll('.feed-item:not([style*="display: none"])');
+          sep.style.display = visibleItems.length > 0 ? '' : 'none';
+        }
+      });
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // Sort Dropdown
+    // ════════════════════════════════════════════════════════════════
+    const sortDropdown = document.getElementById('sortDropdown');
+    const sortBtn = document.getElementById('sortBtn');
+
+    sortBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sortDropdown.classList.toggle('open');
+    });
+
+    document.addEventListener('click', () => {
+      sortDropdown.classList.remove('open');
+    });
+
+    document.querySelectorAll('.sort-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const sort = opt.dataset.sort;
+        currentSort = sort;
+        document.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        sortBtn.innerHTML = `<i class="bi bi-sort-down"></i> ${opt.textContent}`;
+
+        if (sort === 'score') {
+          document.querySelectorAll('.feed-list').forEach(list => {
+            const items = Array.from(list.querySelectorAll('.feed-item'));
+            items.sort((a, b) => {
+              const scoreA = parseFloat(a.querySelector('.feed-score')?.textContent) || 0;
+              const scoreB = parseFloat(b.querySelector('.feed-score')?.textContent) || 0;
+              return scoreB - scoreA;
+            });
+            items.forEach(item => list.appendChild(item));
+          });
+        } else {
+          resetSort();
+        }
+      });
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // Sidebar active state
+    // ════════════════════════════════════════════════════════════════
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+      item.addEventListener('click', () => {
+        // Only apply to non-linked items
+        if (item.getAttribute('href')) return;
+        document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // Infinite Scroll — Intersection Observer
+    // ════════════════════════════════════════════════════════════════
+    const sentinel = document.getElementById('scrollSentinel');
+    let loading = false;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !loading) {
+        loading = true;
+        // Simulate loading delay
+        setTimeout(() => {
+          // In production, fetch more items from API
+          // For demo, just hide the sentinel after a cycle
+          sentinel.innerHTML = '<span>已加载全部信息流</span>';
+          sentinel.classList.add('hidden');
+          loading = false;
+        }, 1200);
+      }
+    }, { rootMargin: '200px' });
+
+    observer.observe(sentinel);
+  </script>
+</body>
+</html>

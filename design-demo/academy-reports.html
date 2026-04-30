@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>市场研报 — 知更鸟学社</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Noto+Serif+SC:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <style>
+    /* ════════════════════════════════════════════════════════════════
+       Design Tokens — Academy Extension
+       ════════════════════════════════════════════════════════════════ */
+    :root {
+      --primary: #C0F0FB;
+      --primary-hover: #9ae0ef;
+      --bg-main: #000000;
+      --bg-secondary: #111111;
+      --text-main: #f5f5f5;
+      --text-muted: #999999;
+      --glass-bg: rgba(17, 17, 17, 0.9);
+      --glass-border: rgba(255, 255, 255, 0.08);
+
+      --academy-gold: #E8D5B7;
+      --academy-gold-dim: rgba(232, 213, 183, 0.15);
+      --academy-gold-glow: rgba(232, 213, 183, 0.06);
+      --academy-warm: #F5EDE3;
+      --academy-sidebar-w: 260px;
+
+      --cat-ai: #6ECFDB;
+      --cat-ai-bg: rgba(110, 207, 219, 0.10);
+      --cat-ai-border: rgba(110, 207, 219, 0.18);
+      --cat-web3: #A78BDB;
+      --cat-web3-bg: rgba(167, 139, 219, 0.10);
+      --cat-web3-border: rgba(167, 139, 219, 0.18);
+      --cat-finance: #D4B87A;
+      --cat-finance-bg: rgba(212, 184, 122, 0.10);
+      --cat-finance-border: rgba(212, 184, 122, 0.18);
+
+      --font-serif: "Playfair Display", "Noto Serif SC", Georgia, serif;
+      --font-sans: "DM Sans", "Noto Sans SC", -apple-system, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      --nav-height: 60px;
+      --radius-lg: 12px;
+      --radius-md: 8px;
+      --radius-sm: 5px;
+
+      --report-list-w: 320px;
+    }
+
+    /* ═══════ Reset ═══════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* ════════════════════════════════════════════════════════════════
+       Top Navigation (shared)
+       ════════════════════════════════════════════════════════════════ */
+    .top-nav {
+      position: sticky; top: 0; z-index: 1000;
+      background: rgba(0, 0, 0, 0.95);
+      border-bottom: 1px solid var(--glass-border);
+      height: var(--nav-height);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem;
+      backdrop-filter: blur(12px);
+    }
+    .nav-left { display: flex; align-items: center; gap: 1.2rem; }
+    .nav-center {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .nav-brand-name {
+      font-family: var(--font-serif); font-size: 1.5rem;
+      font-weight: 700; letter-spacing: 0.02em;
+    }
+    .nav-divider {
+      width: 80px; height: 1px;
+      background: linear-gradient(to right, transparent, var(--glass-border), transparent);
+    }
+    .nav-right { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-link {
+      font-size: 0.85rem; font-weight: 500; color: var(--text-muted);
+      letter-spacing: 0.03em; transition: color 0.2s; cursor: pointer;
+    }
+    .nav-link:hover { color: var(--text-main); }
+    .nav-link.active { color: var(--text-main); }
+    .nav-link.academy-link.active { color: var(--academy-gold); }
+    .nav-dropdown { position: relative; }
+    .nav-dropdown-trigger { display: flex; align-items: center; gap: 0.3rem; cursor: pointer; }
+    .nav-dropdown-arrow { font-size: 0.6rem; transition: transform 0.25s ease; }
+    .nav-dropdown:hover .nav-dropdown-arrow { transform: rotate(180deg); }
+    .nav-dropdown-menu {
+      position: absolute; top: calc(100% + 0.6rem); right: 0;
+      min-width: 200px; background: var(--glass-bg);
+      border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+      padding: 0.5rem 0; opacity: 0; visibility: hidden;
+      transform: translateY(-4px); transition: all 0.2s ease;
+    }
+    .nav-dropdown:hover .nav-dropdown-menu {
+      opacity: 1; visibility: visible; transform: translateY(0);
+    }
+    .nav-dropdown-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.6rem 1rem; font-size: 0.85rem; color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .nav-dropdown-item:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+    .nav-auth-btn {
+      font-size: 0.8rem; font-weight: 500; color: var(--text-muted);
+      background: none; border: 1px solid var(--glass-border);
+      border-radius: var(--radius-md); padding: 0.35rem 0.9rem;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .nav-auth-btn:hover { color: var(--text-main); border-color: rgba(255,255,255,0.2); }
+
+    /* ════════════════════════════════════════════════════════════════
+       Academy Layout: Sidebar + Content
+       ════════════════════════════════════════════════════════════════ */
+    .academy-layout {
+      display: flex;
+      min-height: calc(100vh - var(--nav-height));
+    }
+
+    /* Sidebar */
+    .academy-sidebar {
+      width: var(--academy-sidebar-w);
+      min-height: 100%;
+      border-right: 1px solid rgba(232, 213, 183, 0.06);
+      background: rgba(8, 6, 4, 0.5);
+      padding: 1.5rem 0;
+      flex-shrink: 0;
+      position: sticky; top: var(--nav-height);
+      height: calc(100vh - var(--nav-height));
+      overflow-y: auto;
+    }
+    .sidebar-member-card {
+      margin: 0 1rem 1.5rem; padding: 1rem;
+      background: var(--academy-gold-dim);
+      border: 1px solid rgba(232, 213, 183, 0.1);
+      border-radius: var(--radius-lg); text-align: center;
+    }
+    .sidebar-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--academy-gold), #C4A882);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700;
+      color: #1a1a1a; margin: 0 auto 0.6rem;
+    }
+    .sidebar-member-name { font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 0.3rem; }
+    .sidebar-member-tier {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--academy-gold);
+      background: rgba(232, 213, 183, 0.1);
+      padding: 0.2rem 0.6rem; border-radius: 99px;
+      border: 1px solid rgba(232, 213, 183, 0.15);
+    }
+    .sidebar-member-expiry { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem; }
+
+    .sidebar-group { margin-bottom: 1.2rem; }
+    .sidebar-group-label {
+      font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.12em; color: rgba(232, 213, 183, 0.3);
+      padding: 0 1.3rem; margin-bottom: 0.4rem;
+    }
+    .sidebar-item {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.55rem 1.3rem; font-size: 0.82rem; font-weight: 500;
+      color: rgba(255, 255, 255, 0.5); transition: all 0.2s;
+      cursor: pointer; position: relative;
+    }
+    .sidebar-item i { font-size: 0.95rem; width: 18px; text-align: center; }
+    .sidebar-item:hover { color: rgba(255, 255, 255, 0.85); background: rgba(232, 213, 183, 0.04); }
+    .sidebar-item.active { color: var(--academy-gold); background: rgba(232, 213, 183, 0.06); }
+    .sidebar-item.active::before {
+      content: ''; position: absolute; left: 0; top: 0.3rem; bottom: 0.3rem;
+      width: 2px; background: var(--academy-gold); border-radius: 1px;
+    }
+    .sidebar-badge {
+      font-size: 0.65rem; font-weight: 600; color: var(--academy-gold);
+      background: var(--academy-gold-dim); padding: 0.1rem 0.45rem;
+      border-radius: 99px; margin-left: auto;
+    }
+    .academy-sidebar::-webkit-scrollbar { width: 3px; }
+    .academy-sidebar::-webkit-scrollbar-track { background: transparent; }
+    .academy-sidebar::-webkit-scrollbar-thumb { background: rgba(232, 213, 183, 0.15); border-radius: 3px; }
+
+    /* ════════════════════════════════════════════════════════════════
+       Main Content Area — Two-Pane Report Layout
+       ════════════════════════════════════════════════════════════════ */
+    .academy-main {
+      flex: 1;
+      display: flex;
+      min-height: calc(100vh - var(--nav-height));
+      overflow: hidden;
+    }
+
+    /* ─── Left: Report List ─── */
+    .report-list-pane {
+      width: var(--report-list-w);
+      flex-shrink: 0;
+      border-right: 1px solid rgba(232, 213, 183, 0.06);
+      display: flex;
+      flex-direction: column;
+      background: rgba(8, 6, 4, 0.25);
+    }
+    .report-list-header {
+      padding: 1.5rem 1.2rem 1rem;
+      border-bottom: 1px solid rgba(232, 213, 183, 0.06);
+    }
+    .report-list-title {
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.7rem;
+    }
+
+    /* Filter tabs */
+    .report-filters {
+      display: flex;
+      gap: 0.3rem;
+    }
+    .rpt-filter-btn {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.35);
+      padding: 0.3rem 0.65rem;
+      border-radius: 99px;
+      border: 1px solid transparent;
+      background: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-sans);
+    }
+    .rpt-filter-btn:hover {
+      color: rgba(255, 255, 255, 0.6);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .rpt-filter-btn.active {
+      color: var(--academy-gold);
+      background: rgba(232, 213, 183, 0.08);
+      border-color: rgba(232, 213, 183, 0.15);
+    }
+
+    /* Report list items */
+    .report-list-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem 0;
+    }
+    .report-list-scroll::-webkit-scrollbar { width: 3px; }
+    .report-list-scroll::-webkit-scrollbar-track { background: transparent; }
+    .report-list-scroll::-webkit-scrollbar-thumb { background: rgba(232, 213, 183, 0.1); border-radius: 3px; }
+
+    .rpt-item {
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .rpt-item:hover {
+      background: rgba(232, 213, 183, 0.03);
+    }
+    .rpt-item.active {
+      background: rgba(232, 213, 183, 0.06);
+    }
+    .rpt-item.active::after {
+      content: '';
+      position: absolute;
+      right: 0; top: 0.5rem; bottom: 0.5rem;
+      width: 2px;
+      background: var(--academy-gold);
+      border-radius: 1px;
+    }
+    .rpt-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+    .rpt-item-badges {
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+    }
+    .rpt-cat {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.12rem 0.4rem;
+      border-radius: 3px;
+    }
+    .rpt-cat.ai { color: var(--cat-ai); background: var(--cat-ai-bg); border: 1px solid var(--cat-ai-border); }
+    .rpt-cat.web3 { color: var(--cat-web3); background: var(--cat-web3-bg); border: 1px solid var(--cat-web3-border); }
+    .rpt-cat.finance { color: var(--cat-finance); background: var(--cat-finance-bg); border: 1px solid var(--cat-finance-border); }
+
+    .rpt-action-badge {
+      font-size: 0.56rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+    }
+    .rpt-action-badge.watch { color: #4ade80; background: rgba(74, 222, 128, 0.12); }
+    .rpt-action-badge.monitor { color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
+    .rpt-action-badge.act { color: #f87171; background: rgba(248, 113, 113, 0.15); }
+
+    .rpt-item-date {
+      font-size: 0.68rem;
+      color: rgba(255, 255, 255, 0.25);
+      font-family: var(--font-mono);
+    }
+    .rpt-item-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-main);
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 0.3rem;
+    }
+    .rpt-item-preview {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .rpt-item-footer {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-top: 0.4rem;
+      font-size: 0.66rem;
+      color: rgba(255, 255, 255, 0.2);
+    }
+    .rpt-item-stat {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .rpt-item-stat i { font-size: 0.65rem; }
+
+    /* ─── Right: Report Detail ─── */
+    .report-detail-pane {
+      flex: 1;
+      overflow-y: auto;
+      position: relative;
+    }
+    .report-detail-pane::-webkit-scrollbar { width: 5px; }
+    .report-detail-pane::-webkit-scrollbar-track { background: transparent; }
+    .report-detail-pane::-webkit-scrollbar-thumb { background: rgba(232, 213, 183, 0.1); border-radius: 3px; }
+
+    /* Empty state */
+    .detail-empty {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+    }
+    .detail-empty-icon {
+      font-size: 2.5rem;
+      color: rgba(232, 213, 183, 0.15);
+    }
+    .detail-empty h3 {
+      font-family: var(--font-serif);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.3);
+    }
+    .detail-empty p {
+      font-size: 0.82rem;
+      color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       Report Detail — Structured Rendering
+       ════════════════════════════════════════════════════════════════ */
+    .report-view { display: none; }
+    .report-view.active { display: block; animation: reportFadeIn 0.35s ease both; }
+    @keyframes reportFadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Action Banner ─── */
+    .action-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.9rem 2.5rem;
+      border-bottom: 1px solid rgba(232, 213, 183, 0.06);
+    }
+    .action-banner.watch {
+      background: linear-gradient(135deg, rgba(74, 222, 128, 0.06), transparent);
+    }
+    .action-banner.monitor {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), transparent);
+    }
+    .action-banner.act {
+      background: linear-gradient(135deg, rgba(248, 113, 113, 0.1), transparent);
+    }
+    .banner-signal {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .signal-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+    }
+    .watch .signal-dot { background: #4ade80; box-shadow: 0 0 6px rgba(74, 222, 128, 0.4); animation: pulse-dot 2.5s ease-in-out infinite; }
+    .monitor .signal-dot { background: #fbbf24; box-shadow: 0 0 6px rgba(251, 191, 36, 0.4); animation: pulse-dot 2s ease-in-out infinite; }
+    .act .signal-dot { background: #f87171; box-shadow: 0 0 6px rgba(248, 113, 113, 0.5); animation: pulse-dot 1.2s ease-in-out infinite; }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .signal-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+    .watch .signal-label { color: #4ade80; }
+    .monitor .signal-label { color: #fbbf24; }
+    .act .signal-label { color: #f87171; }
+    .banner-meta {
+      display: flex;
+      gap: 0.6rem;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.25);
+      font-family: var(--font-mono);
+    }
+
+    /* ─── Executive Summary ─── */
+    .executive-summary {
+      padding: 2rem 2.5rem;
+      border-bottom: 1px solid rgba(232, 213, 183, 0.06);
+    }
+    .summary-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: rgba(232, 213, 183, 0.35);
+      margin-bottom: 0.7rem;
+    }
+    .summary-text {
+      font-family: var(--font-serif);
+      font-size: 1.2rem;
+      color: var(--academy-warm);
+      line-height: 1.75;
+      font-weight: 400;
+    }
+
+    /* ─── Metrics Bar ─── */
+    .metrics-bar {
+      display: flex;
+      border-bottom: 1px solid rgba(232, 213, 183, 0.06);
+    }
+    .metric-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem 0;
+      border-right: 1px solid rgba(232, 213, 183, 0.04);
+    }
+    .metric-item:last-child { border-right: none; }
+    .metric-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--academy-gold);
+      font-family: var(--font-mono);
+    }
+    .metric-label {
+      font-size: 0.68rem;
+      color: rgba(255, 255, 255, 0.25);
+      margin-top: 0.15rem;
+    }
+    .metric-item.alert .metric-value { color: #f87171; }
+
+    /* ─── Section Cards ─── */
+    .sections-wrap {
+      padding: 1.5rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .section-card {
+      border: 1px solid rgba(232, 213, 183, 0.06);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .section-card:hover { border-color: rgba(232, 213, 183, 0.12); }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.9rem 1.2rem;
+      background: rgba(232, 213, 183, 0.02);
+      border-bottom: 1px solid rgba(232, 213, 183, 0.04);
+    }
+    .section-title-row {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .section-index {
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(232, 213, 183, 0.08);
+      color: var(--academy-gold);
+      border-radius: 5px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+    .section-title {
+      font-size: 0.9rem;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    /* Signal strength */
+    .signal-tag {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      padding: 0.18rem 0.5rem;
+      border-radius: 3px;
+    }
+    .signal-tag.strong { color: #f87171; background: rgba(248, 113, 113, 0.12); }
+    .signal-tag.moderate { color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
+    .signal-tag.weak { color: #94a3b8; background: rgba(148, 163, 184, 0.08); }
+
+    .section-body {
+      padding: 1rem 1.2rem;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.85;
+    }
+
+    /* Counter argument */
+    .counter-argument {
+      display: flex;
+      gap: 0.7rem;
+      padding: 0.8rem 1.2rem;
+      background: rgba(251, 191, 36, 0.03);
+      border-top: 1px solid rgba(251, 191, 36, 0.08);
+    }
+    .counter-icon {
+      font-size: 0.9rem;
+      color: #fbbf24;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+    .counter-content { display: flex; flex-direction: column; gap: 0.15rem; }
+    .counter-label {
+      font-size: 0.62rem;
+      color: #fbbf24;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .counter-text {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .section-sources {
+      padding: 0.5rem 1.2rem;
+      border-top: 1px solid rgba(232, 213, 183, 0.03);
+      font-size: 0.68rem;
+      color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* ─── Contradictions Panel ─── */
+    .panel-block {
+      padding: 0 2.5rem 1.5rem;
+    }
+    .panel-title {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .panel-title i {
+      color: var(--academy-gold);
+      font-size: 0.9rem;
+    }
+
+    .contradictions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .contra-card {
+      padding: 0.9rem 1rem;
+      border-radius: var(--radius-sm);
+      border-left: 3px solid;
+      background: rgba(255, 255, 255, 0.015);
+      position: relative;
+    }
+    .contra-card.severity-high { border-left-color: #f87171; }
+    .contra-card.severity-medium { border-left-color: #fbbf24; }
+    .contra-card.severity-low { border-left-color: rgba(255, 255, 255, 0.2); }
+    .contra-claims {
+      display: flex;
+      align-items: stretch;
+      gap: 0.8rem;
+    }
+    .claim-side { flex: 1; }
+    .claim-label {
+      font-size: 0.58rem;
+      color: rgba(255, 255, 255, 0.25);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+    .claim-text {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+    .contra-vs {
+      display: flex;
+      align-items: center;
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: #f87171;
+      padding: 0 0.2rem;
+      opacity: 0.6;
+    }
+    .severity-badge {
+      position: absolute;
+      top: 0.6rem; right: 0.7rem;
+      font-size: 0.55rem;
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      font-weight: 700;
+    }
+    .severity-badge.severity-high { color: #f87171; background: rgba(248, 113, 113, 0.12); }
+    .severity-badge.severity-medium { color: #fbbf24; background: rgba(251, 191, 36, 0.12); }
+    .severity-badge.severity-low { color: #94a3b8; background: rgba(148, 163, 184, 0.08); }
+
+    /* ─── Trends Panel ─── */
+    .trends-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .trend-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0.7rem;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.015);
+      font-size: 0.82rem;
+    }
+    .trend-icon { font-size: 0.9rem; flex-shrink: 0; }
+    .trend-topic {
+      color: var(--text-main);
+      font-weight: 600;
+      white-space: nowrap;
+      min-width: 80px;
+    }
+    .trend-desc {
+      color: rgba(255, 255, 255, 0.3);
+      flex: 1;
+    }
+
+    /* ─── Evolution Panel ─── */
+    .evolution-header {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-bottom: 0.8rem;
+    }
+    .evolution-header .panel-title { margin-bottom: 0; }
+    .prev-report-label {
+      font-size: 0.68rem;
+      color: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.15rem 0.5rem;
+      border-radius: 3px;
+    }
+    .evo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.5rem;
+    }
+    .evo-item {
+      padding: 0.75rem 0.9rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(232, 213, 183, 0.04);
+      background: rgba(255, 255, 255, 0.015);
+      transition: border-color 0.2s;
+    }
+    .evo-item:hover { border-color: rgba(232, 213, 183, 0.1); }
+    .evo-new { border-left: 3px solid #4ade80; }
+    .evo-risen { border-left: 3px solid #f87171; }
+    .evo-cooled { border-left: 3px solid #60a5fa; }
+    .evo-stable { border-left: 3px solid rgba(255, 255, 255, 0.15); }
+    .evo-gone { border-left: 3px solid rgba(255, 255, 255, 0.08); opacity: 0.5; }
+    .evo-topic {
+      font-size: 0.82rem;
+      color: var(--text-main);
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+    .evo-directions {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      margin-bottom: 0.3rem;
+    }
+    .evo-prev { color: rgba(255, 255, 255, 0.2); }
+    .evo-arrow { color: rgba(255, 255, 255, 0.15); font-size: 0.6rem; }
+    .evo-curr { color: var(--text-main); }
+    .dir-label {
+      font-size: 0.58rem;
+      color: rgba(255, 255, 255, 0.2);
+      margin-left: 0.15rem;
+    }
+    .evo-desc {
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.2);
+      line-height: 1.4;
+    }
+    .evo-baseline {
+      font-size: 0.78rem;
+      color: rgba(255, 255, 255, 0.2);
+      padding: 0.5rem 0;
+    }
+
+    /* ─── Report Footer ─── */
+    .report-detail-footer {
+      padding: 1.2rem 2.5rem;
+      text-align: right;
+      border-top: 1px solid rgba(232, 213, 183, 0.04);
+      margin-top: 1rem;
+    }
+    .report-detail-footer a {
+      font-size: 0.75rem;
+      color: var(--academy-gold);
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    .report-detail-footer a:hover { opacity: 1; }
+  </style>
+</head>
+
+<body>
+  <!-- ════════════════════════════════════════════════════════════════
+       Top Navigation
+       ════════════════════════════════════════════════════════════════ -->
+  <nav class="top-nav">
+    <div class="nav-left"></div>
+    <div class="nav-center">
+      <div class="nav-divider"></div>
+      <div class="nav-brand-name"><a href="#">知更鸟</a></div>
+      <div class="nav-divider"></div>
+    </div>
+    <div class="nav-right">
+      <a class="nav-link" href="#">首页</a>
+      <a class="nav-link" href="#">AI文章</a>
+      <a class="nav-link" href="#">提示词</a>
+      <div class="nav-dropdown">
+        <a class="nav-link nav-dropdown-trigger">
+          热榜 <i class="bi bi-chevron-down nav-dropdown-arrow"></i>
+        </a>
+        <div class="nav-dropdown-menu">
+          <a class="nav-dropdown-item"><i class="bi bi-github" style="color:#58a6ff"></i><span>GitHub Trending</span></a>
+          <a class="nav-dropdown-item"><i class="bi bi-rocket-takeoff" style="color:#ff6154"></i><span>ProductHunt</span></a>
+        </div>
+      </div>
+      <a class="nav-link academy-link active" href="#">学社</a>
+      <button class="nav-auth-btn"><i class="bi bi-person"></i> 登录</button>
+    </div>
+  </nav>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       Academy Layout: Sidebar + Main
+       ════════════════════════════════════════════════════════════════ -->
+  <div class="academy-layout">
+
+    <!-- Sidebar -->
+    <aside class="academy-sidebar">
+      <div class="sidebar-member-card">
+        <div class="sidebar-avatar">G</div>
+        <div class="sidebar-member-name">Grank</div>
+        <div class="sidebar-member-tier"><i class="bi bi-gem"></i> 资深社员</div>
+        <div class="sidebar-member-expiry">有效期至 2027.04.15</div>
+      </div>
+
+      <a class="sidebar-item" href="academy-nav.html">
+        <i class="bi bi-house"></i> 学社首页
+      </a>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">信息</div>
+        <a class="sidebar-item" href="academy-quicknews.html">
+          <i class="bi bi-star"></i> 信息流
+        </a>
+        <a class="sidebar-item active">
+          <i class="bi bi-file-earmark-bar-graph"></i> 研报
+          <span class="sidebar-badge">6</span>
+        </a>
+        <a class="sidebar-item">
+          <i class="bi bi-fire"></i> 热门叙事
+        </a>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">阅读</div>
+        <a class="sidebar-item"><i class="bi bi-file-earmark-text"></i> 文章 <span class="sidebar-badge">86</span></a>
+        <a class="sidebar-item"><i class="bi bi-play-circle"></i> 视频 <span class="sidebar-badge">24</span></a>
+        <a class="sidebar-item"><i class="bi bi-journal-bookmark"></i> 书籍 <span class="sidebar-badge">8</span></a>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">共建</div>
+        <a class="sidebar-item"><i class="bi bi-chat-square-text"></i> 讨论</a>
+        <a class="sidebar-item"><i class="bi bi-check2-square"></i> 投票</a>
+      </div>
+
+      <div class="sidebar-group">
+        <div class="sidebar-group-label">个人</div>
+        <a class="sidebar-item"><i class="bi bi-clock-history"></i> 阅读记录</a>
+        <a class="sidebar-item"><i class="bi bi-bookmark"></i> 我的收藏</a>
+        <a class="sidebar-item"><i class="bi bi-pencil"></i> 笔记</a>
+      </div>
+    </aside>
+
+    <!-- Main Content: Two-pane report layout -->
+    <div class="academy-main">
+
+      <!-- ─── Left Pane: Report List ─── -->
+      <div class="report-list-pane">
+        <div class="report-list-header">
+          <div class="report-list-title">市场研报</div>
+          <div class="report-filters">
+            <button class="rpt-filter-btn active" data-cat="all">全部</button>
+            <button class="rpt-filter-btn" data-cat="ai">AI</button>
+            <button class="rpt-filter-btn" data-cat="web3">Web3</button>
+            <button class="rpt-filter-btn" data-cat="finance">Finance</button>
+          </div>
+        </div>
+        <div class="report-list-scroll" id="reportList">
+
+          <div class="rpt-item active" data-cat="ai" data-report="0">
+            <div class="rpt-item-top">
+              <div class="rpt-item-badges">
+                <span class="rpt-cat ai">AI</span>
+                <span class="rpt-action-badge monitor">MONITOR</span>
+              </div>
+              <span class="rpt-item-date">04-30 08:00</span>
+            </div>
+            <div class="rpt-item-title">AI 赛道周报：Claude 4 与 Llama 4 双发，开源闭源进入新均衡</div>
+            <div class="rpt-item-preview">开源与闭源模型差距快速收窄，企业部署决策窗口正在打开。头部模型厂商同时加大多模态投入…</div>
+            <div class="rpt-item-footer">
+              <span class="rpt-item-stat"><i class="bi bi-file-earmark-text"></i> 32 篇来源</span>
+              <span class="rpt-item-stat"><i class="bi bi-bar-chart"></i> 7 章节</span>
+            </div>
+          </div>
+
+          <div class="rpt-item" data-cat="finance" data-report="1">
+            <div class="rpt-item-top">
+              <div class="rpt-item-badges">
+                <span class="rpt-cat finance">FINANCE</span>
+                <span class="rpt-action-badge act">ACT</span>
+              </div>
+              <span class="rpt-item-date">04-30 06:00</span>
+            </div>
+            <div class="rpt-item-title">全球宏观周报：美联储鸽派信号叠加日元危机，风险资产进入高波动窗口</div>
+            <div class="rpt-item-preview">6月降息预期升温至 78%，但日元跌破 160 触发套息交易逆转风险，两股力量对冲…</div>
+            <div class="rpt-item-footer">
+              <span class="rpt-item-stat"><i class="bi bi-file-earmark-text"></i> 28 篇来源</span>
+              <span class="rpt-item-stat"><i class="bi bi-bar-chart"></i> 6 章节</span>
+            </div>
+          </div>
+
+          <div class="rpt-item" data-cat="web3" data-report="2">
+            <div class="rpt-item-top">
+              <div class="rpt-item-badges">
+                <span class="rpt-cat web3">WEB3</span>
+                <span class="rpt-action-badge monitor">MONITOR</span>
+              </div>
+              <span class="rpt-item-date">04-30 04:00</span>
+            </div>
+            <div class="rpt-item-title">Web3 周报：以太坊 Pectra 落地，Solana ETF 受理，基础设施层进入质变期</div>
+            <div class="rpt-item-preview">账户抽象从概念走向标准，机构资金通过 ETF 通道持续进场，DeFi 进入定制化时代…</div>
+            <div class="rpt-item-footer">
+              <span class="rpt-item-stat"><i class="bi bi-file-earmark-text"></i> 24 篇来源</span>
+              <span class="rpt-item-stat"><i class="bi bi-bar-chart"></i> 5 章节</span>
+            </div>
+          </div>
+
+          <div class="rpt-item" data-cat="ai" data-report="3">
+            <div class="rpt-item-top">
+              <div class="rpt-item-badges">
+                <span class="rpt-cat ai">AI</span>
+                <span class="rpt-action-badge watch">WATCH</span>
+              </div>
+              <span class="rpt-item-date">04-29 08:00</span>
+            </div>
+            <div class="rpt-item-title">AI 应用层周报：企业端调用量爆发，端侧模型竞赛加速</div>
+            <div class="rpt-item-preview">字节豆包日均调用突破 10 亿次，苹果 WWDC 预告端侧大模型落地，应用层拐点信号初现…</div>
+            <div class="rpt-item-footer">
+              <span class="rpt-item-stat"><i class="bi bi-file-earmark-text"></i> 19 篇来源</span>
+              <span class="rpt-item-stat"><i class="bi bi-bar-chart"></i> 5 章节</span>
+            </div>
+          </div>
+
+          <div class="rpt-item" data-cat="finance" data-report="4">
+            <div class="rpt-item-top">
+              <div class="rpt-item-badges">
+                <span class="rpt-cat finance">FINANCE</span>
+                <span class="rpt-action-badge watch">WATCH</span>
+              </div>
+              <span class="rpt-item-date">04-29 06:00</span>
+            </div>
+            <div class="rpt-item-title">港股与 A 股周报：AI 算力链异动，PMI 跌破荣枯线引发政策预期</div>
+            <div class="rpt-item-preview">南向资金集中买入半导体标的，制造业数据走弱可能触发新一轮政策对冲…</div>
+            <div class="rpt-item-footer">
+              <span class="rpt-item-stat"><i class="bi bi-file-earmark-text"></i> 15 篇来源</span>
+              <span class="rpt-item-stat"><i class="bi bi-bar-chart"></i> 4 章节</span>
+            </div>
+          </div>
+
+          <div class="rpt-item" data-cat="web3" data-report="5">
+            <div class="rpt-item-top">
+              <div class="rpt-item-badges">
+                <span class="rpt-cat web3">WEB3</span>
+                <span class="rpt-action-badge watch">WATCH</span>
+              </div>
+              <span class="rpt-item-date">04-28 20:00</span>
+            </div>
+            <div class="rpt-item-title">DeFi 基础设施周报：Uniswap V4 上线，Circle IPO 定价</div>
+            <div class="rpt-item-preview">Hooks 机制开启定制化 AMM 时代，稳定币赛道最大 IPO 标志加密基础设施进入传统资本市场…</div>
+            <div class="rpt-item-footer">
+              <span class="rpt-item-stat"><i class="bi bi-file-earmark-text"></i> 18 篇来源</span>
+              <span class="rpt-item-stat"><i class="bi bi-bar-chart"></i> 4 章节</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ─── Right Pane: Report Detail ─── -->
+      <div class="report-detail-pane" id="detailPane">
+
+        <!-- Empty State -->
+        <div class="detail-empty" id="detailEmpty" style="display:none;">
+          <i class="bi bi-file-earmark-bar-graph detail-empty-icon"></i>
+          <h3>选择一份研报</h3>
+          <p>点击左侧列表查看详细分析</p>
+        </div>
+
+        <!-- ═══ Report 0: AI Weekly ═══ -->
+        <div class="report-view active" id="report-0">
+          <!-- Action Banner -->
+          <div class="action-banner monitor">
+            <div class="banner-signal">
+              <span class="signal-dot"></span>
+              <span class="signal-label"><i class="bi bi-eye"></i> 持续关注</span>
+            </div>
+            <div class="banner-meta">
+              <span>2025-04-30 08:00</span>
+              <span>·</span>
+              <span>AI</span>
+            </div>
+          </div>
+
+          <!-- Executive Summary -->
+          <div class="executive-summary">
+            <div class="summary-label">核心判断</div>
+            <div class="summary-text">
+              开源与闭源模型的性能差距正在以超出预期的速度收窄。Claude 4 Opus 和 Llama 4 的同期发布标志着模型竞赛进入新阶段：闭源模型仍保持推理能力上的边际优势，但开源模型在成本效率和部署灵活性上的吸引力快速上升，企业端 AI 部署的决策窗口正在打开。
+            </div>
+          </div>
+
+          <!-- Metrics -->
+          <div class="metrics-bar">
+            <div class="metric-item">
+              <span class="metric-value">32</span>
+              <span class="metric-label">情报来源</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-value">8</span>
+              <span class="metric-label">关联叙事</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-value">7</span>
+              <span class="metric-label">分析章节</span>
+            </div>
+            <div class="metric-item alert">
+              <span class="metric-value">3</span>
+              <span class="metric-label">矛盾信号</span>
+            </div>
+          </div>
+
+          <!-- Sections -->
+          <div class="sections-wrap">
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">1</span>
+                  <span class="section-title">闭源模型护城河：推理能力仍是核心壁垒</span>
+                </div>
+                <span class="signal-tag strong">强信号</span>
+              </div>
+              <div class="section-body">
+                Anthropic 的 Claude 4 Opus 在数学推理基准（MATH-500）上取得 94.2% 的得分，较上一代提升 23%；代码生成（HumanEval+）达到 91.8%。这两个维度仍然是闭源模型相对开源方案的最大优势区间。OpenAI 的 o3 推理模型则通过「深度思考」模式将复杂任务拆解为多步骤推理链，在 GPQA Diamond 基准上首次突破 80%。推理能力的差距意味着在金融分析、科研辅助等高价值场景中，闭源模型短期内仍难以被替代。
+              </div>
+              <div class="counter-argument">
+                <i class="bi bi-exclamation-triangle counter-icon"></i>
+                <div class="counter-content">
+                  <span class="counter-label">反方观点</span>
+                  <span class="counter-text">推理能力的差距在多数企业实际应用场景中并不构成瓶颈。Llama 4 Maverick 在客服、文档处理等主流场景中的表现已接近 GPT-4o 水平，而成本仅为其 1/5。</span>
+                </div>
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 6 篇来源文章</div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">2</span>
+                  <span class="section-title">开源模型崛起：Llama 4 重塑竞争格局</span>
+                </div>
+                <span class="signal-tag strong">强信号</span>
+              </div>
+              <div class="section-body">
+                Meta 发布的 Llama 4 系列首次引入混合专家（MoE）架构，其中 Scout 模型支持 1000 万 token 的上下文窗口，Maverick 在同等参数量下的综合性能超越 GPT-4o。Google DeepMind 同期开源 Gemma 3（27B 参数），性能接近 Gemini 2.0 Flash。三个关键变化：（1）MoE 架构使开源模型首次在效率指标上超越同参数量的稠密模型；（2）商用友好许可证降低了企业采用的法律风险；（3）HuggingFace 生态的成熟度使部署门槛降至历史最低。
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 5 篇来源文章</div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">3</span>
+                  <span class="section-title">多模态竞赛：从能力展示到产品化落地</span>
+                </div>
+                <span class="signal-tag moderate">中等信号</span>
+              </div>
+              <div class="section-body">
+                Claude 4 Opus 首次支持原生图像输出和多步骤工具链调用，标志着 Anthropic 从纯文本模型向通用 AI 助手的战略转型。苹果 WWDC 2026 预告 Siri 全面接入端侧大模型并支持第三方 Agent 调用，这将多模态竞赛从模型层推向了操作系统层。Mistral 的 Pixtral Large 2 则填补了欧洲在多模态领域的空白，首次支持中文 OCR 与表格理解。多模态正从技术演示阶段进入实际产品集成阶段，语音+视觉+文本的统一交互将成为下一代 AI 产品的标准配置。
+              </div>
+              <div class="counter-argument">
+                <i class="bi bi-exclamation-triangle counter-icon"></i>
+                <div class="counter-content">
+                  <span class="counter-label">反方观点</span>
+                  <span class="counter-text">多模态能力的商业化变现路径尚不清晰。多数用户的核心需求仍然是高质量文本交互，图像生成和语音功能的付费转化率偏低。</span>
+                </div>
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 4 篇来源文章</div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">4</span>
+                  <span class="section-title">企业端需求爆发：从试点到规模化</span>
+                </div>
+                <span class="signal-tag moderate">中等信号</span>
+              </div>
+              <div class="section-body">
+                字节跳动豆包大模型日均调用量突破 10 亿次，企业客户环比增长 340%，制造业和客服场景渗透最快。百度文心 5.0 首次在中文 SuperCLUE 基准超越 GPT-4o，API 定价下调 30%。两个数据点共同指向一个趋势：国内企业端 AI 采用率正在从早期试点进入规模化部署阶段。成本下降（开源模型 + API 价格战）和场景成熟（客服、文档处理、代码辅助）是两大驱动力。
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 4 篇来源文章</div>
+            </div>
+          </div>
+
+          <!-- Contradictions -->
+          <div class="panel-block">
+            <div class="panel-title"><i class="bi bi-lightning-charge"></i> 矛盾与争议</div>
+            <div class="contradictions-list">
+              <div class="contra-card severity-high">
+                <div class="contra-claims">
+                  <div class="claim-side">
+                    <span class="claim-label">论断 A</span>
+                    <span class="claim-text">闭源模型推理能力优势将在 12 个月内被开源方案追平，企业应优先考虑开源部署以降低长期成本。</span>
+                  </div>
+                  <div class="contra-vs">VS</div>
+                  <div class="claim-side">
+                    <span class="claim-label">论断 B</span>
+                    <span class="claim-text">闭源模型厂商将通过持续迭代维持 6-12 个月的能力领先，在高价值场景中自建开源方案的 ROI 不如直接调用 API。</span>
+                  </div>
+                </div>
+                <span class="severity-badge severity-high">HIGH</span>
+              </div>
+              <div class="contra-card severity-medium">
+                <div class="contra-claims">
+                  <div class="claim-side">
+                    <span class="claim-label">论断 A</span>
+                    <span class="claim-text">多模态是 AI 产品的下一个增长引擎，语音+视觉将成为标准交互方式。</span>
+                  </div>
+                  <div class="contra-vs">VS</div>
+                  <div class="claim-side">
+                    <span class="claim-label">论断 B</span>
+                    <span class="claim-text">文本交互仍占用户使用量的 85%+，多模态功能的商业化变现尚未验证。</span>
+                  </div>
+                </div>
+                <span class="severity-badge severity-medium">MEDIUM</span>
+              </div>
+              <div class="contra-card severity-low">
+                <div class="contra-claims">
+                  <div class="claim-side">
+                    <span class="claim-label">论断 A</span>
+                    <span class="claim-text">API 价格战将加速行业洗牌，中小模型公司面临生存危机。</span>
+                  </div>
+                  <div class="contra-vs">VS</div>
+                  <div class="claim-side">
+                    <span class="claim-label">论断 B</span>
+                    <span class="claim-text">差异化能力和垂直场景深耕使中小玩家仍能保持竞争力。</span>
+                  </div>
+                </div>
+                <span class="severity-badge severity-low">LOW</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trends -->
+          <div class="panel-block">
+            <div class="panel-title"><i class="bi bi-graph-up-arrow"></i> 趋势变化</div>
+            <div class="trends-list">
+              <div class="trend-row">
+                <span class="trend-icon">🔥</span>
+                <span class="trend-topic">开源 MoE</span>
+                <span class="trend-desc">Llama 4 引入 MoE 后，开源模型效率跃升，预计更多厂商跟进</span>
+              </div>
+              <div class="trend-row">
+                <span class="trend-icon">✨</span>
+                <span class="trend-topic">端侧大模型</span>
+                <span class="trend-desc">苹果 WWDC 预告端侧部署，可能改变应用生态格局</span>
+              </div>
+              <div class="trend-row">
+                <span class="trend-icon">➡️</span>
+                <span class="trend-topic">推理能力竞赛</span>
+                <span class="trend-desc">闭源模型持续迭代，但领先幅度在收窄</span>
+              </div>
+              <div class="trend-row">
+                <span class="trend-icon">❄️</span>
+                <span class="trend-topic">纯 API 竞争</span>
+                <span class="trend-desc">价格战趋缓，竞争焦点转向产品化能力</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Evolution -->
+          <div class="panel-block">
+            <div class="evolution-header">
+              <div class="panel-title"><i class="bi bi-arrow-repeat"></i> 趋势演化对比</div>
+              <span class="prev-report-label">vs 上期: AI 赛道周报 04.23</span>
+            </div>
+            <div class="evo-grid">
+              <div class="evo-item evo-new">
+                <div class="evo-topic">开源 MoE</div>
+                <div class="evo-directions">
+                  <span class="evo-curr">🔥 <span class="dir-label">本期</span></span>
+                </div>
+                <div class="evo-desc">新兴话题，Llama 4 首次引入</div>
+              </div>
+              <div class="evo-item evo-risen">
+                <div class="evo-topic">端侧部署</div>
+                <div class="evo-directions">
+                  <span class="evo-prev">➡️ <span class="dir-label">上期</span></span>
+                  <span class="evo-arrow">→</span>
+                  <span class="evo-curr">✨ <span class="dir-label">本期</span></span>
+                </div>
+                <div class="evo-desc">苹果预告推动话题升温</div>
+              </div>
+              <div class="evo-item evo-cooled">
+                <div class="evo-topic">API 价格战</div>
+                <div class="evo-directions">
+                  <span class="evo-prev">🔥 <span class="dir-label">上期</span></span>
+                  <span class="evo-arrow">→</span>
+                  <span class="evo-curr">❄️ <span class="dir-label">本期</span></span>
+                </div>
+                <div class="evo-desc">竞争焦点转向产品化</div>
+              </div>
+              <div class="evo-item evo-stable">
+                <div class="evo-topic">推理能力</div>
+                <div class="evo-directions">
+                  <span class="evo-prev">➡️ <span class="dir-label">上期</span></span>
+                  <span class="evo-arrow">→</span>
+                  <span class="evo-curr">➡️ <span class="dir-label">本期</span></span>
+                </div>
+                <div class="evo-desc">闭源领先但差距收窄</div>
+              </div>
+              <div class="evo-item evo-risen">
+                <div class="evo-topic">多模态产品化</div>
+                <div class="evo-directions">
+                  <span class="evo-prev">➡️ <span class="dir-label">上期</span></span>
+                  <span class="evo-arrow">→</span>
+                  <span class="evo-curr">🔥 <span class="dir-label">本期</span></span>
+                </div>
+                <div class="evo-desc">从技术展示进入产品集成</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="report-detail-footer">
+            <a href="#"><i class="bi bi-box-arrow-up-right"></i> 对象详情页</a>
+          </div>
+        </div>
+
+        <!-- ═══ Report 1: Finance Weekly ═══ -->
+        <div class="report-view" id="report-1">
+          <div class="action-banner act">
+            <div class="banner-signal">
+              <span class="signal-dot"></span>
+              <span class="signal-label"><i class="bi bi-exclamation-triangle"></i> 立即行动</span>
+            </div>
+            <div class="banner-meta">
+              <span>2025-04-30 06:00</span>
+              <span>·</span>
+              <span>Finance</span>
+            </div>
+          </div>
+
+          <div class="executive-summary">
+            <div class="summary-label">核心判断</div>
+            <div class="summary-text">
+              美联储释放近一年来最强鸽派信号，6 月降息概率升至 78%。但与此同时，日元跌破 160 关口引发套息交易逆转担忧，两股力量在风险资产定价中形成对冲。未来两周是高波动窗口，建议关注 CPI 数据和日本央行干预动向。
+            </div>
+          </div>
+
+          <div class="metrics-bar">
+            <div class="metric-item">
+              <span class="metric-value">28</span>
+              <span class="metric-label">情报来源</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-value">5</span>
+              <span class="metric-label">关联叙事</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-value">6</span>
+              <span class="metric-label">分析章节</span>
+            </div>
+            <div class="metric-item alert">
+              <span class="metric-value">4</span>
+              <span class="metric-label">矛盾信号</span>
+            </div>
+          </div>
+
+          <div class="sections-wrap">
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">1</span>
+                  <span class="section-title">美联储鸽派转向：降息窗口打开</span>
+                </div>
+                <span class="signal-tag strong">强信号</span>
+              </div>
+              <div class="section-body">
+                5 月 FOMC 会议维持利率不变，但声明中删除了「通胀仍然偏高」的措辞，鲍威尔在新闻发布会上明确表示「通胀正在朝正确方向移动」。市场解读为 2023 年以来最明确的鸽派信号。联邦基金期货定价显示 6 月降息概率从会前的 45% 飙升至 78%，7 月降息已成为基准预期。10 年期美债收益率下行 5bp 至 4.18%，纳指期货涨 0.8%。
+              </div>
+              <div class="counter-argument">
+                <i class="bi bi-exclamation-triangle counter-icon"></i>
+                <div class="counter-content">
+                  <span class="counter-label">反方观点</span>
+                  <span class="counter-text">剔除住房的核心服务通胀仍粘滞在 4.1%，离 2% 目标距离较大。若 5 月 CPI 再度超预期，6 月降息可能落空。</span>
+                </div>
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 7 篇来源文章</div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">2</span>
+                  <span class="section-title">日元危机：套息交易逆转风险</span>
+                </div>
+                <span class="signal-tag strong">强信号</span>
+              </div>
+              <div class="section-body">
+                美元兑日元突破 160 关口，为 2024 年 7 月以来首次。日本央行紧急召开会议讨论干预方案，市场担忧当局可能进行新一轮外汇干预。日元空头头寸已攀升至 6 个月高位。2024 年 7-8 月的套息交易逆转曾引发全球风险资产短暂崩盘，当前持仓结构与当时高度相似。若日本央行强力干预或美联储实际降息，日元快速升值可能触发新一轮去杠杆。
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 5 篇来源文章</div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">3</span>
+                  <span class="section-title">黄金与避险资产：不确定性的镜像</span>
+                </div>
+                <span class="signal-tag moderate">中等信号</span>
+              </div>
+              <div class="section-body">
+                黄金突破 3500 美元/盎司再创历史新高，全球央行购金需求持续旺盛。避险资产走强与风险资产（美股、加密货币）的高位运行形成反差，反映市场对尾部风险的定价正在上升。英伟达 Q1 财报营收 441 亿美元（同比 +69%）但盘后微跌，也说明市场对利好已充分定价。
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 4 篇来源文章</div>
+            </div>
+          </div>
+
+          <div class="panel-block">
+            <div class="panel-title"><i class="bi bi-lightning-charge"></i> 矛盾与争议</div>
+            <div class="contradictions-list">
+              <div class="contra-card severity-high">
+                <div class="contra-claims">
+                  <div class="claim-side">
+                    <span class="claim-label">论断 A</span>
+                    <span class="claim-text">鸽派信号明确，6月降息是大概率事件，应提前加仓成长股。</span>
+                  </div>
+                  <div class="contra-vs">VS</div>
+                  <div class="claim-side">
+                    <span class="claim-label">论断 B</span>
+                    <span class="claim-text">核心通胀粘滞，降息预期可能再次落空，当前定价过度乐观。</span>
+                  </div>
+                </div>
+                <span class="severity-badge severity-high">HIGH</span>
+              </div>
+              <div class="contra-card severity-high">
+                <div class="contra-claims">
+                  <div class="claim-side">
+                    <span class="claim-label">论断 A</span>
+                    <span class="claim-text">日元套息交易逆转风险可控，日本央行干预力度有限。</span>
+                  </div>
+                  <div class="contra-vs">VS</div>
+                  <div class="claim-side">
+                    <span class="claim-label">论断 B</span>
+                    <span class="claim-text">当前持仓结构与 2024 年 7 月高度相似，去杠杆风险被低估。</span>
+                  </div>
+                </div>
+                <span class="severity-badge severity-high">HIGH</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-block">
+            <div class="panel-title"><i class="bi bi-graph-up-arrow"></i> 趋势变化</div>
+            <div class="trends-list">
+              <div class="trend-row">
+                <span class="trend-icon">🔥</span>
+                <span class="trend-topic">降息预期</span>
+                <span class="trend-desc">6月概率飙升至78%，市场已开始定价7月降息</span>
+              </div>
+              <div class="trend-row">
+                <span class="trend-icon">✨</span>
+                <span class="trend-topic">日元危机</span>
+                <span class="trend-desc">突破160后干预风险上升，套息逆转成为新变量</span>
+              </div>
+              <div class="trend-row">
+                <span class="trend-icon">➡️</span>
+                <span class="trend-topic">避险需求</span>
+                <span class="trend-desc">黄金持续新高，央行购金需求稳定</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="report-detail-footer">
+            <a href="#"><i class="bi bi-box-arrow-up-right"></i> 对象详情页</a>
+          </div>
+        </div>
+
+        <!-- ═══ Report 2: Web3 Weekly ═══ -->
+        <div class="report-view" id="report-2">
+          <div class="action-banner monitor">
+            <div class="banner-signal">
+              <span class="signal-dot"></span>
+              <span class="signal-label"><i class="bi bi-eye"></i> 持续关注</span>
+            </div>
+            <div class="banner-meta">
+              <span>2025-04-30 04:00</span>
+              <span>·</span>
+              <span>Web3</span>
+            </div>
+          </div>
+
+          <div class="executive-summary">
+            <div class="summary-label">核心判断</div>
+            <div class="summary-text">
+              以太坊 Pectra 升级正式激活，账户抽象从概念走向标准。Solana ETF 获 SEC 受理开启 240 天审批倒计时。Uniswap V4 的 Hooks 机制为 DeFi 带来定制化时代。三大事件共同指向 Web3 基础设施层正在经历质变，但用户端体验的改善仍需 6-12 个月才能体现。
+            </div>
+          </div>
+
+          <div class="metrics-bar">
+            <div class="metric-item">
+              <span class="metric-value">24</span>
+              <span class="metric-label">情报来源</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-value">6</span>
+              <span class="metric-label">关联叙事</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-value">5</span>
+              <span class="metric-label">分析章节</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-value">1</span>
+              <span class="metric-label">矛盾信号</span>
+            </div>
+          </div>
+
+          <div class="sections-wrap">
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">1</span>
+                  <span class="section-title">Pectra 升级：账户抽象正式落地</span>
+                </div>
+                <span class="signal-tag strong">强信号</span>
+              </div>
+              <div class="section-body">
+                EIP-7702 允许 EOA 账户临时委托智能合约代码，实现 Gas 代付、批量交易和权限管理。MetaMask 和 Rainbow 将在下周推出支持版本。Aave 和 Uniswap 已开始适配新接口。这是以太坊自 The Merge 以来最重要的用户体验升级，将显著降低新用户进入 DeFi 的门槛。
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 5 篇来源文章</div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">2</span>
+                  <span class="section-title">Solana ETF：合规化里程碑</span>
+                </div>
+                <span class="signal-tag strong">强信号</span>
+              </div>
+              <div class="section-body">
+                SEC 正式受理 Solana ETF 申请，审批流程进入 240 天倒计时。继比特币和以太坊 ETF 之后，这标志着加密资产合规化的又一里程碑。比特币现货 ETF 已连续 5 日净流入，累计规模突破 1200 亿美元，机构资金进场趋势明确。若 Solana ETF 最终获批，预计将为市场带来新一轮机构资金。
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 4 篇来源文章</div>
+            </div>
+
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">3</span>
+                  <span class="section-title">DeFi 定制化时代：Hooks 开启新范式</span>
+                </div>
+                <span class="signal-tag moderate">中等信号</span>
+              </div>
+              <div class="section-body">
+                Uniswap V4 正式上线主网，开发者可通过 Hooks 插件自定义流动性池逻辑。首个动态手续费 Hook 已部署。Circle 同期完成 IPO 定价（每股 31 美元，估值 68 亿美元），为稳定币赛道最大上市案。Vitalik 提出「The Splurge」路线图更新，聚焦账户抽象与跨链互操作。
+              </div>
+              <div class="counter-argument">
+                <i class="bi bi-exclamation-triangle counter-icon"></i>
+                <div class="counter-content">
+                  <span class="counter-label">反方观点</span>
+                  <span class="counter-text">Hooks 的复杂度可能引入新的安全风险。历史上 DeFi 创新往往伴随安全事故，审计和形式化验证的成熟度可能跟不上开发速度。</span>
+                </div>
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 3 篇来源文章</div>
+            </div>
+          </div>
+
+          <div class="panel-block">
+            <div class="panel-title"><i class="bi bi-graph-up-arrow"></i> 趋势变化</div>
+            <div class="trends-list">
+              <div class="trend-row">
+                <span class="trend-icon">🔥</span>
+                <span class="trend-topic">账户抽象</span>
+                <span class="trend-desc">从概念验证进入标准协议阶段</span>
+              </div>
+              <div class="trend-row">
+                <span class="trend-icon">✨</span>
+                <span class="trend-topic">ETF 合规化</span>
+                <span class="trend-desc">Solana ETF 受理开启新一轮机构入场预期</span>
+              </div>
+              <div class="trend-row">
+                <span class="trend-icon">➡️</span>
+                <span class="trend-topic">DeFi 创新</span>
+                <span class="trend-desc">Hooks 上线，定制化流动性成为新方向</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="report-detail-footer">
+            <a href="#"><i class="bi bi-box-arrow-up-right"></i> 对象详情页</a>
+          </div>
+        </div>
+
+        <!-- ═══ Reports 3-5: Placeholder views ═══ -->
+        <div class="report-view" id="report-3">
+          <div class="action-banner watch">
+            <div class="banner-signal">
+              <span class="signal-dot"></span>
+              <span class="signal-label"><i class="bi bi-eye"></i> 常规观望</span>
+            </div>
+            <div class="banner-meta"><span>2025-04-29 08:00</span><span>·</span><span>AI</span></div>
+          </div>
+          <div class="executive-summary">
+            <div class="summary-label">核心判断</div>
+            <div class="summary-text">
+              企业端 AI 采用率从试点进入规模化阶段。字节豆包日均调用突破 10 亿次，苹果端侧大模型预告加速终端竞赛。应用层拐点信号初现，但商业化变现路径仍在探索中。
+            </div>
+          </div>
+          <div class="metrics-bar">
+            <div class="metric-item"><span class="metric-value">19</span><span class="metric-label">情报来源</span></div>
+            <div class="metric-item"><span class="metric-value">4</span><span class="metric-label">关联叙事</span></div>
+            <div class="metric-item"><span class="metric-value">5</span><span class="metric-label">分析章节</span></div>
+            <div class="metric-item"><span class="metric-value">1</span><span class="metric-label">矛盾信号</span></div>
+          </div>
+          <div class="sections-wrap">
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">1</span>
+                  <span class="section-title">企业端调用量爆发</span>
+                </div>
+                <span class="signal-tag moderate">中等信号</span>
+              </div>
+              <div class="section-body">
+                字节跳动豆包大模型日均调用量突破 10 亿次，企业客户环比增长 340%。制造业和客服场景渗透最快，反映国内企业端 AI 采用率正在加速。百度文心 5.0 首次在中文基准超越 GPT-4o，API 定价下调 30% 进一步降低门槛。
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 5 篇来源文章</div>
+            </div>
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">2</span>
+                  <span class="section-title">端侧模型竞赛升温</span>
+                </div>
+                <span class="signal-tag moderate">中等信号</span>
+              </div>
+              <div class="section-body">
+                苹果 WWDC 2026 预告 Siri 全面接入端侧大模型，支持第三方 Agent 调用。这标志着端侧 AI 从概念进入产品阶段，可能改变移动端应用生态。Google 和 Samsung 也在加速端侧模型部署，终端 AI 竞赛正式开启。
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 3 篇来源文章</div>
+            </div>
+          </div>
+          <div class="report-detail-footer">
+            <a href="#"><i class="bi bi-box-arrow-up-right"></i> 对象详情页</a>
+          </div>
+        </div>
+
+        <div class="report-view" id="report-4">
+          <div class="action-banner watch">
+            <div class="banner-signal">
+              <span class="signal-dot"></span>
+              <span class="signal-label"><i class="bi bi-eye"></i> 常规观望</span>
+            </div>
+            <div class="banner-meta"><span>2025-04-29 06:00</span><span>·</span><span>Finance</span></div>
+          </div>
+          <div class="executive-summary">
+            <div class="summary-label">核心判断</div>
+            <div class="summary-text">
+              港股 AI 算力链条异动明显，南向资金集中买入半导体标的。A 股方面，4 月制造业 PMI 回落至 49.8 跌破荣枯线，贸易摩擦影响开始显现，市场预期政策加码对冲。
+            </div>
+          </div>
+          <div class="metrics-bar">
+            <div class="metric-item"><span class="metric-value">15</span><span class="metric-label">情报来源</span></div>
+            <div class="metric-item"><span class="metric-value">3</span><span class="metric-label">关联叙事</span></div>
+            <div class="metric-item"><span class="metric-value">4</span><span class="metric-label">分析章节</span></div>
+          </div>
+          <div class="sections-wrap">
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">1</span>
+                  <span class="section-title">港股 AI 板块异动</span>
+                </div>
+                <span class="signal-tag moderate">中等信号</span>
+              </div>
+              <div class="section-body">
+                中芯国际单日涨幅超 12%，受算力需求预期驱动，半导体及 AI 算力标的获南向资金大幅净买入。市场对 AI 产业链上中游的关注度持续升温，但需警惕短期情绪过热后的回调风险。
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 4 篇来源文章</div>
+            </div>
+          </div>
+          <div class="report-detail-footer">
+            <a href="#"><i class="bi bi-box-arrow-up-right"></i> 对象详情页</a>
+          </div>
+        </div>
+
+        <div class="report-view" id="report-5">
+          <div class="action-banner watch">
+            <div class="banner-signal">
+              <span class="signal-dot"></span>
+              <span class="signal-label"><i class="bi bi-eye"></i> 常规观望</span>
+            </div>
+            <div class="banner-meta"><span>2025-04-28 20:00</span><span>·</span><span>Web3</span></div>
+          </div>
+          <div class="executive-summary">
+            <div class="summary-label">核心判断</div>
+            <div class="summary-text">
+              Uniswap V4 正式上线开启 DeFi 定制化时代，Circle IPO 定价标志加密基础设施正式进入传统资本市场。稳定币赛道合规化进程加速，比特币现货 ETF 持续净流入验证机构入场趋势。
+            </div>
+          </div>
+          <div class="metrics-bar">
+            <div class="metric-item"><span class="metric-value">18</span><span class="metric-label">情报来源</span></div>
+            <div class="metric-item"><span class="metric-value">4</span><span class="metric-label">关联叙事</span></div>
+            <div class="metric-item"><span class="metric-value">4</span><span class="metric-label">分析章节</span></div>
+          </div>
+          <div class="sections-wrap">
+            <div class="section-card">
+              <div class="section-header">
+                <div class="section-title-row">
+                  <span class="section-index">1</span>
+                  <span class="section-title">Uniswap V4：Hooks 开启定制化 AMM</span>
+                </div>
+                <span class="signal-tag strong">强信号</span>
+              </div>
+              <div class="section-body">
+                开发者可通过 Hooks 插件自定义流动性池逻辑，首个动态手续费 Hook 已部署。这标志着 DeFi 从标准化协议向可编程基础设施的演进，可能催生新的流动性创新范式。
+              </div>
+              <div class="section-sources"><i class="bi bi-file-earmark-text"></i> 引用 4 篇来源文章</div>
+            </div>
+          </div>
+          <div class="report-detail-footer">
+            <a href="#"><i class="bi bi-box-arrow-up-right"></i> 对象详情页</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ════════════════════════════════════════════════════════════════
+    // Report List Click → Show Detail
+    // ════════════════════════════════════════════════════════════════
+    const listItems = document.querySelectorAll('.rpt-item');
+    const reportViews = document.querySelectorAll('.report-view');
+    const detailEmpty = document.getElementById('detailEmpty');
+
+    listItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const reportId = item.dataset.report;
+
+        // Update active state in list
+        listItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        // Show corresponding report view
+        reportViews.forEach(v => v.classList.remove('active'));
+        const target = document.getElementById('report-' + reportId);
+        if (target) {
+          target.classList.add('active');
+        }
+
+        // Scroll detail pane to top
+        document.getElementById('detailPane').scrollTop = 0;
+      });
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // Category Filter
+    // ════════════════════════════════════════════════════════════════
+    const filterBtns = document.querySelectorAll('.rpt-filter-btn');
+
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const cat = btn.dataset.cat;
+
+        listItems.forEach(item => {
+          if (cat === 'all' || item.dataset.cat === cat) {
+            item.style.display = '';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // ════════════════════════════════════════════════════════════════
+    // Sidebar active state
+    // ════════════════════════════════════════════════════════════════
+    document.querySelectorAll('.sidebar-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (item.getAttribute('href')) return;
+        document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
