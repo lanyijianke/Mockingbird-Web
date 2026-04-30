@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RequireRole } from '@/lib/auth/require-role';
-import { queryOne } from '@/lib/db';
-import getDb from '@/lib/db';
+import { queryOne, transaction } from '@/lib/db';
 import {
     canUpgradeRole,
     getDefaultMembershipDurationDays,
@@ -83,25 +82,20 @@ export async function POST(request: NextRequest) {
             .replace(/\.\d{3}Z$/, '');
 
         // 原子事务：递增使用次数 + 记录兑换 + 升级角色
-        const db = getDb();
-        const redeem = db.transaction(() => {
-            const updateCode = db.prepare(
+        await transaction(async (conn) => {
+            await conn.query(
                 `UPDATE InvitationCodes SET UsedCount = UsedCount + 1 WHERE Id = ?`,
+                [invitation.Id],
             );
-            updateCode.run(invitation.Id);
-
-            const insertRedemption = db.prepare(
+            await conn.query(
                 `INSERT INTO InvitationRedemptions (InvitationCodeId, UserId) VALUES (?, ?)`,
+                [invitation.Id, userId],
             );
-            insertRedemption.run(invitation.Id, userId);
-
-            const updateRole = db.prepare(
+            await conn.query(
                 `UPDATE Users SET Role = ?, MembershipExpiresAt = ? WHERE Id = ?`,
+                [invitation.TargetRole, membershipExpiresAt, userId],
             );
-            updateRole.run(invitation.TargetRole, membershipExpiresAt, userId);
         });
-
-        redeem();
 
         return NextResponse.json({
             success: true,
