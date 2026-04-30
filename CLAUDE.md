@@ -20,7 +20,7 @@ npm run invite:generate  # Generate membership invite codes
 
 ## Architecture
 
-**Stack:** Next.js 16 App Router + React 19 + TypeScript + better-sqlite3 + Vitest
+**Stack:** Next.js 16 App Router + React 19 + TypeScript + mysql2 + Vitest
 
 ### Two main directories
 - `app/` — Next.js App Router pages, layouts, route handlers, and API endpoints
@@ -40,9 +40,9 @@ npm run invite:generate  # Generate membership invite codes
 | `lib/security/` | CSP headers |
 
 ### Database
-- **SQLite** via better-sqlite3 at `./data/knowledge.db` (configurable via `SQLITE_DB_PATH`)
-- Schema auto-initialized in `lib/init-schema.ts` — tables: Users, Sessions, OauthAccounts, Prompts, SystemLogs, InvitationCodes, InvitationRedemptions
-- WAL mode enabled, foreign keys enforced
+- **MySQL** via mysql2/promise connection pool at `mockingbird_knowledge` (configurable via `MYSQL_URL`)
+- Schema auto-initialized in `lib/init-schema.ts` — tables: Users, Sessions, OauthAccounts, Prompts, SystemLogs, InvitationCodes, InvitationRedemptions, AcademyContent
+- Tests require `MYSQL_URL` env var pointing to a MySQL instance with CREATE DATABASE permission
 
 ### Role hierarchy (ascending)
 `user` → `junior_member` (30d) → `senior_member` (365d) → `founder_member` (lifetime) → `admin`
@@ -71,5 +71,5 @@ npm run invite:generate  # Generate membership invite codes
 - **4-space** indentation in `lib/` and route handlers; **2-space** in React components — match surrounding file style
 - Reuse centralized config (`lib/site-config.ts`, `lib/seo/config.ts`) for brand names, URLs, callbacks
 - Conventional commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`
-- Tests go in `tests/unit/`; use temp `SQLITE_DB_PATH` for isolation
+- Tests go in `tests/unit/`; use `MYSQL_URL` env var with CREATE DATABASE permission
 - Never commit secrets — use `.env.local` (see `.env.example`)

@@ -46,13 +46,6 @@ public/content/
 /content/
 raw-incoming/prompts/
 
-# sqlite data (auto-created by init-schema)
-/data/
-
-
 # test artifacts
 test-results/
 .playwright-mcp/
-
-# database backups
-db_backups/
