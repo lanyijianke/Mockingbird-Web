@@ -7,23 +7,6 @@ import { execute, query, queryScalar } from '@/lib/db';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-export interface SystemLog {
-    Id: number;
-    Level: string;
-    Source: string;
-    Message: string;
-    Detail: string | null;
-    CreatedAt: string;
-}
-
-export interface LogQueryOptions {
-    level?: LogLevel;
-    source?: string;
-    since?: string;
-    page?: number;
-    pageSize?: number;
-}
-
 /**
  * 写入一条日志到 SystemLogs 表
  */

@@ -65,11 +65,6 @@ export async function getArticleCategories(site: string = 'ai'): Promise<Article
     return snapshot.categoriesBySite[normalizeSite(site)] || [];
 }
 
-export async function getArticleCategoryName(site: string, category: string): Promise<string> {
-    const categories = await getArticleCategories(site);
-    return categories.find((item) => item.code === category)?.name || category;
-}
-
 /** 获取 Top N 文章 */
 export async function getTopArticles(
     count: number = 9,
