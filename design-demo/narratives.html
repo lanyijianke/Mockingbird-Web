@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>热门叙事 | MOCKINGBIRD</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <style>
+    :root {
+      --neon-blue: #00f3ff;
+      --neon-green: #00ff88;
+      --neon-purple: #bd00ff;
+      --neon-red: #ff2266;
+      --neon-orange: #ff8800;
+      --neon-yellow: #ffcc00;
+      --bg-deep: #050510;
+      --bg-card: rgba(5, 5, 15, 0.85);
+      --glass-border: rgba(0, 243, 255, 0.12);
+      --text-primary: rgba(255, 255, 255, 0.92);
+      --text-secondary: rgba(255, 255, 255, 0.58);
+      --text-dim: rgba(255, 255, 255, 0.35);
+
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      --font-display: 'Rajdhani', sans-serif;
+      --font-body: 'Inter', -apple-system, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .glass {
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      backdrop-filter: blur(16px);
+    }
+
+    /* ═══ Page Container ═══ */
+    .narratives-page-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px 24px;
+      height: calc(100vh - 100px);
+    }
+
+    /* ═══ Filter Bar ═══ */
+    .filter-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+    }
+    .tab-nav { display: flex; gap: 8px; }
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.5);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-family: var(--font-body);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover {
+      border-color: rgba(0, 243, 255, 0.3);
+      color: rgba(255,255,255,0.8);
+    }
+    .tab-btn.active {
+      background: rgba(0, 243, 255, 0.1);
+      border-color: rgba(0, 243, 255, 0.4);
+      color: var(--neon-blue);
+    }
+    .tab-btn i { font-size: 0.9rem; }
+
+    .narrative-stats { display: flex; align-items: center; gap: 4px; }
+    .stat-badge {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-family: var(--font-mono);
+    }
+    .phase-stat.rising { color: #ff8800; background: rgba(255, 136, 0, 0.12); }
+    .phase-stat.peak { color: #ff2266; background: rgba(255, 34, 102, 0.12); }
+    .phase-stat.cooling { color: #8899aa; background: rgba(136, 153, 170, 0.1); }
+    .phase-stat.emerging { color: #00ff88; background: rgba(0, 255, 136, 0.1); }
+
+    /* ═══ Workspace Layout ═══ */
+    .narrative-workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+      gap: 14px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ═══ Narrative List ═══ */
+    .narrative-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .narrative-row {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: stretch;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(13, 17, 23, 0.72);
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+    }
+    .narrative-row:hover {
+      border-color: rgba(0, 243, 255, 0.28);
+      background: rgba(18, 26, 37, 0.84);
+    }
+    .narrative-row.selected {
+      border-color: rgba(0, 243, 255, 0.55);
+      background: rgba(0, 243, 255, 0.07);
+    }
+
+    .rank-cell {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      color: rgba(255,255,255,0.42);
+      font-family: var(--font-mono);
+      font-size: 0.84rem;
+      padding-top: 2px;
+    }
+
+    .narrative-main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .narrative-row-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .narrative-title {
+      margin: 0;
+      color: rgba(255,255,255,0.92);
+      font-size: 1rem;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+    .narrative-badges {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .narrative-summary {
+      margin: 0;
+      color: rgba(255,255,255,0.58);
+      font-size: 0.84rem;
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .narrative-row-bottom {
+      display: grid;
+      grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+      gap: 14px;
+      align-items: center;
+    }
+
+    /* Heat bar */
+    .row-heat {
+      display: grid;
+      grid-template-columns: auto minmax(80px, 1fr) 34px;
+      gap: 8px;
+      align-items: center;
+    }
+    .row-heat-label {
+      color: rgba(255,255,255,0.45);
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+    }
+    .heat-bar-container {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .row-heat-bar { height: 7px; }
+    .heat-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+    .row-heat-score {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .row-meta {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255,255,255,0.45);
+      font-size: 0.76rem;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .row-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ═══ Phase / Category Badges ═══ */
+    .phase-badge {
+      font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+    }
+    .phase-emerging { background: rgba(0, 255, 136, 0.12); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.25); }
+    .phase-rising { background: rgba(255, 136, 0, 0.15); color: #ff8800; border: 1px solid rgba(255, 136, 0, 0.3); }
+    .phase-peak { background: rgba(255, 34, 102, 0.18); color: #ff2266; border: 1px solid rgba(255, 34, 102, 0.35); box-shadow: 0 0 8px rgba(255, 34, 102, 0.3); }
+    .phase-cooling { background: rgba(136, 153, 170, 0.1); color: #8899aa; border: 1px solid rgba(136, 153, 170, 0.2); }
+
+    .narrative-category-tag {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 4px;
+    }
+    .tag-web3 { background: rgba(0, 255, 136, 0.1); color: #00ff88; }
+    .tag-ai { background: rgba(189, 0, 255, 0.1); color: #bd00ff; }
+    .tag-finance { background: rgba(255, 204, 0, 0.1); color: #ffcc00; }
+    .tag-other { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+    .signal-badge { font-size: 0.65rem; padding: 2px 6px; border-radius: 8px; white-space: nowrap; }
+    .signal-strong { background: rgba(0, 255, 136, 0.12); color: #00ff88; }
+    .signal-moderate { background: rgba(255, 204, 0, 0.12); color: #ffcc00; }
+    .signal-weak { background: rgba(136, 153, 170, 0.12); color: #8899aa; }
+
+    .entity-tag {
+      font-size: 0.72rem; padding: 3px 10px; border-radius: 4px;
+      background: rgba(0, 243, 255, 0.08); color: var(--neon-blue);
+      border: 1px solid rgba(0, 243, 255, 0.15);
+      font-family: var(--font-mono);
+    }
+    .entity-tag.compact {
+      padding: 2px 7px;
+      font-size: 0.68rem;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ═══ Buttons ═══ */
+    .view-details-btn {
+      background: transparent; border: 1px solid rgba(0, 243, 255, 0.4);
+      color: var(--neon-blue); padding: 6px 14px; border-radius: 6px;
+      font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+      font-family: var(--font-body);
+    }
+    .view-details-btn:hover {
+      background: rgba(0, 243, 255, 0.1); border-color: var(--neon-blue);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.2);
+    }
+    .view-detail-page-btn {
+      background: linear-gradient(135deg, rgba(0, 243, 255, 0.12), rgba(0, 243, 255, 0.05));
+      border: 1px solid rgba(0, 243, 255, 0.5);
+      color: var(--neon-blue); padding: 6px 14px; border-radius: 6px;
+      font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
+      letter-spacing: 0.5px;
+      font-family: var(--font-body);
+    }
+    .view-detail-page-btn:hover {
+      background: rgba(0, 243, 255, 0.18);
+      box-shadow: 0 0 16px rgba(0, 243, 255, 0.3);
+    }
+
+    /* ═══ Detail Panel ═══ */
+    .detail-panel {
+      min-height: 0;
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+      border-left: 1px solid rgba(0, 243, 255, 0.1);
+    }
+    .detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .detail-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: #fff;
+      margin: 0;
+      line-height: 1.2;
+    }
+    .detail-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+    .phase-reason {
+      font-size: 0.78rem;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.55);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+    .detail-heat { display: flex; align-items: center; gap: 10px; }
+    .heat-label {
+      font-size: 0.75rem; color: rgba(255,255,255,0.4);
+      font-family: var(--font-mono); min-width: 30px;
+    }
+    .detail-heat-bar { flex: 1; height: 8px; }
+    .heat-score-big {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.5rem;
+      text-shadow: 0 0 12px currentColor;
+      min-width: 36px;
+      text-align: right;
+    }
+    .detail-description {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.75);
+      line-height: 1.6;
+    }
+    .detail-section { display: flex; flex-direction: column; gap: 8px; }
+    .section-label {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.35);
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      letter-spacing: 1px;
+    }
+    .core-entities-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .detail-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: auto;
+    }
+    .detail-stat { font-size: 0.82rem; color: var(--text-secondary); }
+    .detail-stat i { vertical-align: text-bottom; }
+    .detail-btns { display: flex; gap: 6px; }
+
+    /* ═══ Responsive ═══ */
+    @media (max-width: 1100px) {
+      .narrative-workspace { grid-template-columns: 1fr; }
+      .detail-panel { display: none; }
+      .narrative-row { grid-template-columns: 42px minmax(0, 1fr); }
+      .row-actions { grid-column: 2; justify-content: flex-start; }
+    }
+    @media (max-width: 720px) {
+      .narrative-row-top, .narrative-row-bottom {
+        grid-template-columns: 1fr;
+        display: flex; flex-direction: column; align-items: flex-start;
+      }
+      .narrative-badges, .row-meta { justify-content: flex-start; white-space: normal; }
+      .row-heat { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="narratives-page-container">
+
+  <!-- Filter Bar -->
+  <div class="filter-bar glass">
+    <div class="tab-nav">
+      <button class="tab-btn active"><i class="bi bi-grid-3x3-gap"></i> 全部</button>
+      <button class="tab-btn"><i class="bi bi-cpu"></i> AI</button>
+      <button class="tab-btn"><i class="bi bi-globe2"></i> Web3</button>
+      <button class="tab-btn"><i class="bi bi-graph-up-arrow"></i> 金融</button>
+    </div>
+    <div class="narrative-stats">
+      <span class="stat-badge">活跃: 8</span>
+      <span class="stat-badge phase-stat peak">⚡ 巅峰 2</span>
+      <span class="stat-badge phase-stat rising">🔥 升温 3</span>
+      <span class="stat-badge phase-stat emerging">✨ 初现 2</span>
+      <span class="stat-badge phase-stat cooling">❄️ 冷却 1</span>
+    </div>
+  </div>
+
+  <div class="narrative-workspace">
+    <section class="narrative-list glass" id="narrativeList">
+      <!-- JS rendered -->
+    </section>
+
+    <aside class="detail-panel glass" id="detailPanel">
+      <!-- JS rendered -->
+    </aside>
+  </div>
+</div>
+
+<script>
+// ═══ Mock Data ═══
+const narratives = [
+  {
+    id: 1, rank: 1,
+    title: "Claude 4 发布引发 AI Agent 竞赛升级",
+    category: "AI",
+    phase: "Peak", heatScore: 92, articleCount: 14, signalStrength: "strong",
+    coreEntities: ["Claude 4", "Anthropic", "AI Agent", "MCP", "Codex"],
+    summary: "Anthropic 发布 Claude 4 系列模型，带动 AI Agent 能力大幅跃升。多家公司跟进发布 Agent 框架，行业竞争进入白热化阶段。",
+    phaseReason: "阶段依据：热度 92 且为强信号，进入巅峰。"
+  },
+  {
+    id: 2, rank: 2,
+    title: "RWA 代币化成为 DeFi 新叙事核心",
+    category: "Web3",
+    phase: "Peak", heatScore: 85, articleCount: 11, signalStrength: "strong",
+    coreEntities: ["RWA", "BlackRock", "Ondo Finance", "Tokenization"],
+    summary: "BlackRock 的 BUIDL 基金规模突破 10 亿美元，RWA 赛道成为机构和散户共同关注的焦点，多个新协议涌现。",
+    phaseReason: "阶段依据：热度 85 且为强信号，进入巅峰。"
+  },
+  {
+    id: 3, rank: 3,
+    title: "AI 编程助手全面进入「自主编码」时代",
+    category: "AI",
+    phase: "Rising", heatScore: 73, articleCount: 9, signalStrength: "moderate",
+    coreEntities: ["Cursor", "Claude Code", "Windsurf", " Devin", "SWE-Agent"],
+    summary: "AI 编程工具从辅助补全迈向全自主编码，Claude Code 和 Cursor 等工具展现出端到端完成复杂任务的能力。",
+    phaseReason: "阶段依据：本轮热度或关联文章较上一轮增长，当前热度 73，关联 9 篇。"
+  },
+  {
+    id: 4, rank: 4,
+    title: "Solana 生态 ETF 预期升温",
+    category: "Web3",
+    phase: "Rising", heatScore: 68, articleCount: 7, signalStrength: "moderate",
+    coreEntities: ["Solana", "ETF", "VanEck", "SEC", "Grayscale"],
+    summary: "多家机构提交 Solana ETF 申请，市场对 SEC 批准的预期逐渐增强，SOL 价格走势引发关注。",
+    phaseReason: "阶段依据：本轮热度或关联文章较上一轮增长，当前热度 68，关联 7 篇。"
+  },
+  {
+    id: 5, rank: 5,
+    title: "美联储降息预期反复，全球市场波动加剧",
+    category: "Finance",
+    phase: "Rising", heatScore: 62, articleCount: 8, signalStrength: "moderate",
+    coreEntities: ["Fed", "利率", "通胀", "就业数据", "纳斯达克"],
+    summary: "美国就业数据强于预期，市场对美联储降息时点的判断反复摇摆，全球股债汇市场波动明显加大。",
+    phaseReason: "阶段依据：本轮热度或关联文章较上一轮增长，当前热度 62，关联 8 篇。"
+  },
+  {
+    id: 6, rank: 6,
+    title: "MCP 协议生态快速扩张，成为 AI 工具互联标准",
+    category: "AI",
+    phase: "Emerging", heatScore: 45, articleCount: 4, signalStrength: null,
+    coreEntities: ["MCP", "Anthropic", "Tool Protocol", "Function Calling"],
+    summary: "Anthropic 推出的 Model Context Protocol（MCP）正在被越来越多的 AI 工具和平台采纳，有望成为工具互联的统一标准。",
+    phaseReason: "阶段依据：新发现叙事，等待下一轮趋势确认。"
+  },
+  {
+    id: 7, rank: 7,
+    title: "亚洲稳定币监管框架加速成型",
+    category: "Finance",
+    phase: "Emerging", heatScore: 38, articleCount: 3, signalStrength: null,
+    coreEntities: ["稳定币", "香港", "新加坡", "MiCA", "合规"],
+    summary: "香港和新加坡相继出台稳定币监管细则，亚洲正在成为全球稳定币合规创新的试验田。",
+    phaseReason: "阶段依据：新发现叙事，等待下一轮趋势确认。"
+  },
+  {
+    id: 8, rank: 8,
+    title: "NFT 市场复苏叙事消退",
+    category: "Web3",
+    phase: "Cooling", heatScore: 15, articleCount: 2, signalStrength: "weak",
+    coreEntities: ["NFT", "OpenSea", "Blur", "PFP"],
+    summary: "此前一轮 NFT 市场回暖的叙事逐渐失去动力，交易量和关注热度连续下降。",
+    phaseReason: "阶段依据：连续 3 轮下降，进入冷却。"
+  }
+];
+
+// ═══ Helpers ═══
+function getPhaseLabel(phase) {
+  return { Emerging: '✨ 初现', Rising: '🔥 升温', Peak: '⚡ 巅峰', Cooling: '❄️ 冷再' }[phase] || phase;
+}
+function getPhaseClass(phase) {
+  return 'phase-' + phase.toLowerCase();
+}
+function getCategoryClass(cat) {
+  return { Web3: 'tag-web3', AI: 'tag-ai', Finance: 'tag-finance' }[cat] || 'tag-other';
+}
+function getHeatColor(score) {
+  if (score >= 80) return '#ff2266';
+  if (score >= 60) return '#ff8800';
+  if (score >= 40) return '#ffcc00';
+  if (score >= 20) return '#00ccff';
+  return '#8899aa';
+}
+function getHeatGradient(score) {
+  if (score >= 80) return 'linear-gradient(90deg, #ff2266, #ff4488)';
+  if (score >= 60) return 'linear-gradient(90deg, #ff8800, #ffaa44)';
+  if (score >= 40) return 'linear-gradient(90deg, #ffcc00, #ffdd44)';
+  if (score >= 20) return 'linear-gradient(90deg, #00ccff, #44ddff)';
+  return 'linear-gradient(90deg, #8899aa, #aabbcc)';
+}
+function getSignalIcon(s) {
+  return { strong: '📡 强', moderate: '📶 中', weak: '📉 弱' }[s] || '';
+}
+
+// ═══ Render List ═══
+function renderList() {
+  const list = document.getElementById('narrativeList');
+  list.innerHTML = narratives.map(n => `
+    <article class="narrative-row" data-id="${n.id}" onclick="selectNarrative(${n.id})">
+      <div class="rank-cell">${String(n.rank).padStart(2, '0')}</div>
+      <div class="narrative-main">
+        <div class="narrative-row-top">
+          <h3 class="narrative-title">${n.title}</h3>
+          <div class="narrative-badges">
+            <span class="phase-badge ${getPhaseClass(n.phase)}">${getPhaseLabel(n.phase)}</span>
+            <span class="narrative-category-tag ${getCategoryClass(n.category)}">${n.category}</span>
+            ${n.signalStrength ? `<span class="signal-badge signal-${n.signalStrength}">${getSignalIcon(n.signalStrength)}</span>` : ''}
+          </div>
+        </div>
+        <p class="narrative-summary">${n.summary}</p>
+        <div class="narrative-row-bottom">
+          <div class="row-heat">
+            <span class="row-heat-label">热度</span>
+            <div class="heat-bar-container row-heat-bar">
+              <div class="heat-bar-fill" style="width:${n.heatScore}%; background:${getHeatGradient(n.heatScore)};"></div>
+            </div>
+            <span class="row-heat-score" style="color:${getHeatColor(n.heatScore)};">${n.heatScore}</span>
+          </div>
+          <div class="row-meta">
+            <span>${n.articleCount} 篇文章</span>
+            ${n.coreEntities.slice(0, 4).map(e => `<span class="entity-tag compact">${e}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="row-actions" onclick="event.stopPropagation()">
+        <button class="view-detail-page-btn" onclick="location.href='narrative-detail.html?id=${n.id}'">详情</button>
+      </div>
+    </article>
+  `).join('');
+}
+
+// ═══ Render Detail Panel ═══
+function renderDetail(n) {
+  const panel = document.getElementById('detailPanel');
+  panel.innerHTML = `
+    <div class="detail-header">
+      <h2 class="detail-title">${n.title}</h2>
+    </div>
+    <div class="detail-badges">
+      <span class="phase-badge ${getPhaseClass(n.phase)}">${getPhaseLabel(n.phase)}</span>
+      <span class="narrative-category-tag ${getCategoryClass(n.category)}">${n.category}</span>
+      ${n.signalStrength ? `<span class="signal-badge signal-${n.signalStrength}">${getSignalIcon(n.signalStrength)}</span>` : ''}
+    </div>
+    <div class="phase-reason">${n.phaseReason}</div>
+    <div class="detail-heat">
+      <div class="heat-label">热度</div>
+      <div class="heat-bar-container detail-heat-bar">
+        <div class="heat-bar-fill" style="width:${n.heatScore}%; background:${getHeatGradient(n.heatScore)};"></div>
+      </div>
+      <span class="heat-score-big" style="color:${getHeatColor(n.heatScore)};">${n.heatScore}</span>
+    </div>
+    <div class="detail-description">${n.summary}</div>
+    <div class="detail-section">
+      <div class="section-label">核心实体</div>
+      <div class="core-entities-row">
+        ${n.coreEntities.map(e => `<span class="entity-tag">${e}</span>`).join('')}
+      </div>
+    </div>
+    <div class="detail-actions">
+      <div class="detail-stat">
+        <i class="bi bi-file-earmark-text"></i> ${n.articleCount} 篇文章
+      </div>
+      <div class="detail-btns">
+        <button class="view-detail-page-btn" onclick="location.href='narrative-detail.html?id=${n.id}'">进入详情 →</button>
+      </div>
+    </div>
+  `;
+}
+
+function selectNarrative(id) {
+  document.querySelectorAll('.narrative-row').forEach(el => el.classList.remove('selected'));
+  const row = document.querySelector(`.narrative-row[data-id="${id}"]`);
+  if (row) row.classList.add('selected');
+  const n = narratives.find(x => x.id === id);
+  if (n) renderDetail(n);
+}
+
+// ═══ Tab switching (demo: filter by category) ═══
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ═══ Init ═══
+renderList();
+selectNarrative(1);
+</script>
+
+</body>
+</html>

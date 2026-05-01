@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>叙事详情 — Claude 4 发布引发 AI Agent 竞赛升级 | MOCKINGBIRD</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <style>
+    :root {
+      --neon-blue: #00f3ff;
+      --neon-green: #00ff88;
+      --neon-purple: #bd00ff;
+      --neon-red: #ff2266;
+      --neon-orange: #ff8800;
+      --neon-yellow: #ffcc00;
+      --bg-deep: #050510;
+      --bg-card: rgba(5, 5, 15, 0.85);
+      --glass-border: rgba(0, 243, 255, 0.12);
+      --text-primary: rgba(255, 255, 255, 0.92);
+      --text-secondary: rgba(255, 255, 255, 0.58);
+      --text-dim: rgba(255, 255, 255, 0.35);
+
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      --font-display: 'Rajdhani', sans-serif;
+      --font-body: 'Inter', -apple-system, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .glass {
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      backdrop-filter: blur(16px);
+    }
+
+    /* ═══ Page Layout ═══ */
+    .detail-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 24px 60px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* ═══ Top Header ═══ */
+    .page-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text-secondary);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .back-btn:hover {
+      border-color: rgba(0, 243, 255, 0.4);
+      color: var(--neon-blue);
+      background: rgba(0, 243, 255, 0.06);
+    }
+    .header-main {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.25;
+    }
+    .header-badges { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+    /* ═══ Badges (shared) ═══ */
+    .phase-badge {
+      font-size: 0.65rem; font-weight: 700; padding: 3px 10px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+    }
+    .phase-emerging { background: rgba(0, 255, 136, 0.12); color: #00ff88; border: 1px solid rgba(0, 255, 136, 0.25); }
+    .phase-rising   { background: rgba(255, 136, 0, 0.15); color: #ff8800; border: 1px solid rgba(255, 136, 0, 0.3); }
+    .phase-peak     { background: rgba(255, 34, 102, 0.18); color: #ff2266; border: 1px solid rgba(255, 34, 102, 0.35); box-shadow: 0 0 8px rgba(255, 34, 102, 0.3); }
+    .phase-cooling  { background: rgba(136, 153, 170, 0.1); color: #8899aa; border: 1px solid rgba(136, 153, 170, 0.2); }
+
+    .category-tag {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 4px;
+    }
+    .tag-web3    { background: rgba(0, 255, 136, 0.1); color: #00ff88; }
+    .tag-ai      { background: rgba(189, 0, 255, 0.1); color: #bd00ff; }
+    .tag-finance { background: rgba(255, 204, 0, 0.1); color: #ffcc00; }
+
+    .entity-tag {
+      font-size: 0.72rem; padding: 3px 10px; border-radius: 4px;
+      background: rgba(0, 243, 255, 0.08); color: var(--neon-blue);
+      border: 1px solid rgba(0, 243, 255, 0.15);
+      font-family: var(--font-mono);
+    }
+
+    /* ═══ Heat Bar ═══ */
+    .heat-strip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+    }
+    .heat-label {
+      font-size: 0.78rem; color: rgba(255,255,255,0.4);
+      font-family: var(--font-mono); min-width: 30px;
+    }
+    .heat-bar-track {
+      flex: 1; height: 8px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .heat-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+    .heat-score-big {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.5rem;
+      text-shadow: 0 0 14px currentColor;
+      min-width: 40px;
+      text-align: right;
+    }
+    .core-entities-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 0 20px 14px;
+    }
+
+    /* ═══ Section Panels ═══ */
+    .section-panel {
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .section-icon {
+      font-size: 1.1rem;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+    }
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.45);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .section-body {
+      font-size: 0.92rem;
+      color: rgba(255,255,255,0.78);
+      line-height: 1.7;
+    }
+
+    /* ═══ Two-column grid for contradictions + insights ═══ */
+    .two-col-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    /* ═══ Contradiction Cards ═══ */
+    .contradiction-card {
+      background: rgba(255, 34, 102, 0.04);
+      border: 1px solid rgba(255, 34, 102, 0.15);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      gap: 10px;
+      transition: border-color 0.2s;
+    }
+    .contradiction-card:hover {
+      border-color: rgba(255, 34, 102, 0.35);
+    }
+    .contra-bar {
+      width: 3px;
+      border-radius: 2px;
+      background: var(--neon-red);
+      flex-shrink: 0;
+    }
+    .contra-content { flex: 1; min-width: 0; }
+    .contra-title {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.88);
+      margin-bottom: 4px;
+    }
+    .contra-preview {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .contra-meta {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.4);
+      font-family: var(--font-mono);
+    }
+    .credibility {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .credibility.high { background: rgba(0, 255, 136, 0.1); color: #00ff88; }
+    .credibility.med  { background: rgba(255, 204, 0, 0.1); color: #ffcc00; }
+    .credibility.low  { background: rgba(255, 34, 102, 0.1); color: #ff2266; }
+
+    /* ═══ Insight Cards ═══ */
+    .insight-card {
+      background: rgba(189, 0, 255, 0.04);
+      border: 1px solid rgba(189, 0, 255, 0.15);
+      border-radius: 8px;
+      padding: 12px 14px;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+    .insight-card:hover {
+      border-color: rgba(189, 0, 255, 0.35);
+    }
+    .insight-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .insight-type {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .insight-type.risk {
+      background: rgba(255, 34, 102, 0.12);
+      color: var(--neon-red);
+      border: 1px solid rgba(255, 34, 102, 0.25);
+    }
+    .insight-type.opportunity {
+      background: rgba(0, 255, 136, 0.1);
+      color: var(--neon-green);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+    }
+    .insight-score {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+    .insight-title {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.88);
+    }
+    .insight-preview {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.55;
+      margin-top: 4px;
+    }
+    .insight-full {
+      font-size: 0.86rem;
+      color: rgba(255,255,255,0.72);
+      line-height: 1.65;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(189, 0, 255, 0.12);
+      display: none;
+    }
+    .insight-card.expanded .insight-full { display: block; }
+    .insight-card.expanded .insight-preview { display: none; }
+
+    /* ═══ Articles Grid ═══ */
+    .articles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .article-card {
+      background: rgba(0, 243, 255, 0.03);
+      border: 1px solid rgba(0, 243, 255, 0.1);
+      border-radius: 8px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .article-card:hover {
+      border-color: rgba(0, 243, 255, 0.35);
+      background: rgba(0, 243, 255, 0.06);
+    }
+    .article-card.selected {
+      border-color: var(--neon-blue);
+      background: rgba(0, 243, 255, 0.08);
+      box-shadow: 0 0 12px rgba(0, 243, 255, 0.15);
+    }
+    .article-source-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .article-source {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--neon-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .article-quality {
+      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(0, 255, 136, 0.1);
+      color: #00ff88;
+      font-weight: 700;
+    }
+    .article-quality.med { background: rgba(255, 204, 0, 0.1); color: #ffcc00; }
+    .article-quality.low { background: rgba(136, 153, 170, 0.1); color: #8899aa; }
+    .article-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.88);
+      line-height: 1.4;
+    }
+    .article-summary {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .article-time {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.35);
+      font-family: var(--font-mono);
+    }
+
+    /* ═══ Article Reader Panel ═══ */
+    .article-reader {
+      display: none;
+      border: 1px solid rgba(0, 243, 255, 0.2);
+      border-radius: 12px;
+      background: rgba(5, 5, 20, 0.95);
+      padding: 20px 24px;
+      margin-top: 8px;
+    }
+    .article-reader.open { display: block; }
+    .reader-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .reader-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.45);
+    }
+    .reader-meta i { margin-right: 4px; }
+    .reader-actions { display: flex; gap: 8px; }
+    .reader-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text-secondary);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: all 0.2s;
+    }
+    .reader-btn:hover {
+      border-color: rgba(0, 243, 255, 0.4);
+      color: var(--neon-blue);
+    }
+    .reader-btn.primary {
+      border-color: rgba(0, 243, 255, 0.5);
+      color: var(--neon-blue);
+    }
+    .reader-title {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 14px;
+      line-height: 1.3;
+    }
+    .reader-section {
+      margin-bottom: 14px;
+    }
+    .reader-section-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.35);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+    }
+    .reader-reasoning {
+      font-size: 0.85rem;
+      color: rgba(189, 0, 255, 0.8);
+      line-height: 1.6;
+      background: rgba(189, 0, 255, 0.06);
+      border-left: 3px solid rgba(189, 0, 255, 0.4);
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+    }
+    .reader-summary {
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.72);
+      line-height: 1.65;
+    }
+    .reader-content {
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.65);
+      line-height: 1.7;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    .reader-content::-webkit-scrollbar { width: 4px; }
+    .reader-content::-webkit-scrollbar-track { background: transparent; }
+    .reader-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    /* ═══ Event Lineage ═══ */
+    .lineage-summary {
+      display: flex;
+      gap: 20px;
+      padding: 10px 0;
+    }
+    .lineage-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.55);
+    }
+    .lineage-stat strong {
+      color: var(--neon-purple);
+      font-weight: 700;
+    }
+    .timeline {
+      position: relative;
+      padding-left: 24px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, rgba(189, 0, 255, 0.5), rgba(189, 0, 255, 0.1));
+    }
+    .event-node {
+      position: relative;
+      padding: 12px 16px;
+      margin-bottom: 4px;
+      background: rgba(189, 0, 255, 0.04);
+      border: 1px solid rgba(189, 0, 255, 0.12);
+      border-radius: 8px;
+      transition: border-color 0.2s;
+    }
+    .event-node:hover {
+      border-color: rgba(189, 0, 255, 0.3);
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -20px;
+      top: 18px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid rgba(189, 0, 255, 0.6);
+      background: var(--bg-deep);
+    }
+    .timeline-dot.pulse {
+      border-color: var(--neon-green);
+      box-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+      animation: dot-pulse 2s infinite;
+    }
+    @keyframes dot-pulse {
+      0%, 100% { box-shadow: 0 0 4px rgba(0, 255, 136, 0.3); }
+      50% { box-shadow: 0 0 12px rgba(0, 255, 136, 0.6); }
+    }
+    .event-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .event-date {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.4);
+    }
+    .event-ongoing {
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(0, 255, 136, 0.12);
+      color: #00ff88;
+      animation: dot-pulse 2s infinite;
+    }
+    .event-type-badge {
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .type-launch   { background: rgba(0, 243, 255, 0.1); color: var(--neon-blue); }
+    .type-reaction { background: rgba(255, 136, 0, 0.1); color: var(--neon-orange); }
+    .type-analysis { background: rgba(189, 0, 255, 0.1); color: var(--neon-purple); }
+    .type-regulation { background: rgba(255, 204, 0, 0.1); color: var(--neon-yellow); }
+    .event-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.88);
+      margin-bottom: 4px;
+    }
+    .event-desc {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.5;
+    }
+    .event-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .event-tag {
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(0, 243, 255, 0.06);
+      color: rgba(0, 243, 255, 0.7);
+      border: 1px solid rgba(0, 243, 255, 0.1);
+    }
+    .event-stats {
+      display: flex;
+      gap: 14px;
+      margin-top: 6px;
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.35);
+      font-family: var(--font-mono);
+    }
+    /* Causal connector */
+    .causal-link {
+      padding: 4px 0 4px 16px;
+      font-size: 0.72rem;
+      color: rgba(189, 0, 255, 0.5);
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .causal-link::before {
+      content: '↓';
+      color: rgba(189, 0, 255, 0.4);
+    }
+
+    /* ═══ Community Graph Placeholder ═══ */
+    .community-selector {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .community-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.55);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+    .community-btn:hover {
+      border-color: rgba(0, 255, 136, 0.3);
+      color: rgba(255,255,255,0.8);
+    }
+    .community-btn.active {
+      border-color: rgba(0, 255, 136, 0.5);
+      color: #00ff88;
+      background: rgba(0, 255, 136, 0.08);
+    }
+    .community-btn .primary-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--neon-green);
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .graph-canvas {
+      width: 100%;
+      height: 350px;
+      border: 1px solid rgba(0, 255, 136, 0.1);
+      border-radius: 8px;
+      background: rgba(0, 255, 136, 0.02);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.25);
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+    }
+
+    /* ═══ Responsive ═══ */
+    @media (max-width: 860px) {
+      .two-col-grid { grid-template-columns: 1fr; }
+      .articles-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .header-title { font-size: 1.2rem; }
+      .lineage-summary { flex-wrap: wrap; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="detail-page">
+
+  <!-- ═══ HEADER ═══ -->
+  <div class="page-header glass">
+    <a href="narratives.html" class="back-btn">
+      <i class="bi bi-arrow-left"></i> 叙事雷达
+    </a>
+    <div class="header-main">
+      <h1 class="header-title">Claude 4 发布引发 AI Agent 竞赛升级</h1>
+      <div class="header-badges">
+        <span class="phase-badge phase-peak">⚡ 巅峰</span>
+        <span class="category-tag tag-ai">AI</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ HEAT + ENTITIES ═══ -->
+  <div class="glass" style="padding-top:4px;">
+    <div class="heat-strip">
+      <span class="heat-label">热度</span>
+      <div class="heat-bar-track">
+        <div class="heat-bar-fill" style="width:92%; background: linear-gradient(90deg, #ff2266, #ff4488);"></div>
+      </div>
+      <span class="heat-score-big" style="color: #ff2266;">92</span>
+    </div>
+    <div class="core-entities-strip">
+      <span class="entity-tag">Claude 4</span>
+      <span class="entity-tag">Anthropic</span>
+      <span class="entity-tag">AI Agent</span>
+      <span class="entity-tag">MCP</span>
+      <span class="entity-tag">Codex</span>
+      <span class="entity-tag">OpenAI</span>
+      <span class="entity-tag">Google DeepMind</span>
+    </div>
+  </div>
+
+  <!-- ═══ NARRATIVE BODY ═══ -->
+  <section class="section-panel glass">
+    <div class="section-head">
+      <span class="section-icon" style="background: rgba(189,0,255,0.15); color: #bd00ff;">◈</span>
+      <span class="section-label">NARRATIVE // 叙事推理链</span>
+    </div>
+    <div class="section-body">
+      <p>Anthropic 于 2026 年 4 月发布 Claude 4 系列模型（Opus 4.7、Sonnet 4.6、Haiku 4.5），在推理、编码和多模态能力上实现重大突破。该发布标志着 AI 从「辅助工具」向「自主代理」的关键转折。</p>
+      <br>
+      <p>Claude 4 的核心能力跃升包括：原生工具使用（Tool Use）、长上下文理解（200K+ tokens）、多步骤自主任务执行，以及通过 MCP 协议实现的外部系统互联。这些能力使得 AI Agent 从概念验证阶段进入实际生产力场景。</p>
+      <br>
+      <p>竞品响应迅速：OpenAI 发布 Codex agent、Google DeepMind 推出 Project Mariner、微软更新 Copilot Studio。整个行业在 Agent 框架、工具协议和安全对齐三个维度展开激烈竞争。</p>
+      <br>
+      <p>市场信号层面，AI 编程工具（Cursor、Claude Code、Windsurf）月活用户激增，企业级 Agent 部署案例增多，资本持续涌入 Agent 基础设施赛道。</p>
+    </div>
+  </section>
+
+  <!-- ═══ TWO-COL: CONTRADICTIONS + INSIGHTS ═══ -->
+  <div class="two-col-grid">
+
+    <!-- Contradictions -->
+    <section class="section-panel glass">
+      <div class="section-head">
+        <span class="section-icon" style="background: rgba(255,34,102,0.15); color: #ff2266;">⚡</span>
+        <span class="section-label">CONTRADICTIONS // 矛盾信号</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div class="contradiction-card">
+          <div class="contra-bar"></div>
+          <div class="contra-content">
+            <div class="contra-title">Agent 安全性声明与实际表现脱节</div>
+            <div class="contra-preview">多家厂商声称其 Agent 产品具备「安全对齐」，但独立测试发现 Claude 4 Opus 在 12% 的对抗场景中出现未预期的工具滥用行为，OpenAI Codex 在 8% 的测试中泄露了系统提示词。</div>
+            <div class="contra-meta">
+              <span>来源: AI Safety Benchmark</span>
+              <span class="credibility high">可信度 87</span>
+            </div>
+          </div>
+        </div>
+        <div class="contradiction-card">
+          <div class="contra-bar"></div>
+          <div class="contra-content">
+            <div class="contra-title">「全面替代程序员」叙事与市场需求数据矛盾</div>
+            <div class="contra-preview">媒体广泛报道 AI Agent 将取代软件工程师，但 2026 Q1 数据显示全球开发者岗位需求同比增长 14%，高级工程师薪资中位数上升 9%。</div>
+            <div class="contra-meta">
+              <span>来源: Stack Overflow Survey</span>
+              <span class="credibility med">可信度 72</span>
+            </div>
+          </div>
+        </div>
+        <div class="contradiction-card">
+          <div class="contra-bar"></div>
+          <div class="contra-content">
+            <div class="contra-title">MCP 标准化承诺 vs 生态碎片化现状</div>
+            <div class="contra-preview">Anthropic 推出 MCP 声称要统一工具协议，但 OpenAI 和 Google 各推自有方案（Function Calling v3 / Gemini Tools），实际形成了三个互不兼容的生态。</div>
+            <div class="contra-meta">
+              <span>来源: TechCrunch 分析</span>
+              <span class="credibility med">可信度 68</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Insights -->
+    <section class="section-panel glass">
+      <div class="section-head">
+        <span class="section-icon" style="background: rgba(189,0,255,0.15); color: #bd00ff;">◆</span>
+        <span class="section-label">INSIGHTS // 二阶洞察</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div class="insight-card" onclick="this.classList.toggle('expanded')">
+          <div class="insight-head">
+            <span class="insight-type risk">RISK</span>
+            <span class="insight-score" style="color: #ff2266;">⚠ 78</span>
+          </div>
+          <div class="insight-title">Agent 滥用风险窗口期正在扩大</div>
+          <div class="insight-preview">AI Agent 获得外部系统访问权限的速度远超安全框架的成熟速度，存在 3-6 个月的风险窗口期…</div>
+          <div class="insight-full">
+            AI Agent 获得外部系统访问权限（通过 MCP、Function Calling 等）的速度远超安全审计框架的成熟速度。当前存在 3-6 个月的风险窗口期，期间 Agent 可能被恶意指令引导执行未授权操作。企业应立即建立 Agent 行为监控和权限最小化策略。
+            <br><br>
+            关键风险点：工具链式调用（tool chaining）可能导致权限提升攻击；Agent 的自主决策边界缺乏标准化定义。
+          </div>
+        </div>
+        <div class="insight-card" onclick="this.classList.toggle('expanded')">
+          <div class="insight-head">
+            <span class="insight-type opportunity">OPPORTUNITY</span>
+            <span class="insight-score" style="color: #00ff88;">✦ 85</span>
+          </div>
+          <div class="insight-title">Agent 基础设施层存在重大创业机会</div>
+          <div class="insight-preview">Agent 编排、监控、安全审计和记忆管理工具严重不足，市场空白巨大…</div>
+          <div class="insight-full">
+            当前 AI Agent 的能力层（模型本身）竞争已经白热化，但基础设施层严重缺失。具体空白包括：Agent 编排框架、实时行为监控仪表盘、安全审计工具、长期记忆与知识管理、多 Agent 协作协议。
+            <br><br>
+            预计 2026 年下半年将出现一批估值 $100M+ 的 Agent Infra 初创公司。建议关注 Agent 可观测性（observability）和安全合规两个细分赛道。
+          </div>
+        </div>
+        <div class="insight-card" onclick="this.classList.toggle('expanded')">
+          <div class="insight-head">
+            <span class="insight-type risk">RISK</span>
+            <span class="insight-score" style="color: #ff8800;">⚠ 62</span>
+          </div>
+          <div class="insight-title">监管滞后可能导致行业自设标准碎片化</div>
+          <div class="insight-preview">各国 AI 监管进度不一，行业可能走向多个互不兼容的自律标准…</div>
+          <div class="insight-full">
+            欧盟 AI Act 主要覆盖模型层，对 Agent 层的监管细则尚未出台。美国以行业自律为主，中国则通过《生成式 AI 服务管理暂行办法》进行框架性约束。三个司法辖区可能形成三套不同的 Agent 合规要求，增加全球化部署的复杂度。
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══ SOURCE EVIDENCE ═══ -->
+  <section class="section-panel glass">
+    <div class="section-head">
+      <span class="section-icon" style="background: rgba(0,243,255,0.15); color: #00f3ff;">▣</span>
+      <span class="section-label">SOURCE EVIDENCE // 关联文章</span>
+    </div>
+    <div class="articles-grid" id="articlesGrid">
+      <!-- JS rendered -->
+    </div>
+    <div class="article-reader" id="articleReader">
+      <!-- JS rendered -->
+    </div>
+  </section>
+
+  <!-- ═══ EVENT LINEAGE ═══ -->
+  <section class="section-panel glass">
+    <div class="section-head">
+      <span class="section-icon" style="background: rgba(189,0,255,0.15); color: #bd00ff;">🧬</span>
+      <span class="section-label">EVENT LINEAGE // 事件脉络</span>
+    </div>
+    <div class="lineage-summary">
+      <div class="lineage-stat"><strong>6</strong> 事件节点</div>
+      <div class="lineage-stat"><strong>5</strong> 因果链</div>
+      <div class="lineage-stat"><strong>12</strong> 参与实体</div>
+      <div class="lineage-stat"><strong>24</strong> 情报源</div>
+    </div>
+    <div class="timeline" id="timeline">
+      <!-- JS rendered -->
+    </div>
+  </section>
+
+  <!-- ═══ COMMUNITY GRAPH ═══ -->
+  <section class="section-panel glass">
+    <div class="section-head">
+      <span class="section-icon" style="background: rgba(0,255,136,0.15); color: #00ff88;">⬡</span>
+      <span class="section-label">COMMUNITY GRAPH // 社区子图谱</span>
+    </div>
+    <div class="community-selector">
+      <button class="community-btn active"><span class="primary-dot"></span>AI Agent 核心</button>
+      <button class="community-btn">Anthropic 生态</button>
+      <button class="community-btn">AI 编程工具链</button>
+      <button class="community-btn">Agent 安全</button>
+    </div>
+    <div class="graph-canvas" id="graphCanvas">
+      <span>交互式社区图谱 (D3 力导向图占位)</span>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// ═══ Mock Articles ═══
+const articles = [
+  {
+    id: 1, source: 'Anthropic Blog', quality: 'high', qualityScore: 95,
+    title: 'Introducing Claude 4: A New Era of AI Agents',
+    summary: 'Anthropic 发布 Claude 4 系列，包含 Opus 4.7、Sonnet 4.6、Haiku 4.5 三个版本，首次实现原生 Agent 能力。',
+    publishedAt: '2026-04-15',
+    author: 'Anthropic Team',
+    reasoning: '官方一手来源，直接定义了叙事的核心事件节点。该发布是整个 AI Agent 竞赛叙事的触发点。',
+    fullSummary: 'Claude 4 系列在工具使用、长上下文推理和自主任务执行方面实现了质的飞跃。Opus 4.7 在 SWE-bench 上达到 72% 的通过率，Sonnet 4.6 在 HumanEval 编码测试中取得 96% 的准确率。最显著的变化是原生 Agent 能力——模型可以直接使用工具、管理状态、并在多步骤任务中保持一致性。',
+    content: 'Claude 4 代表了我们从对话式 AI 向自主式 AI 转变的里程碑。通过原生工具使用和 MCP 协议集成，Claude 4 可以自主完成从代码编写到系统管理的复杂任务。\n\n三个版本的能力分布：\n- Opus 4.7：最强推理和创造性任务\n- Sonnet 4.6：平衡性能和速度，适合大多数 Agent 场景\n- Haiku 4.5：超低延迟，适合实时交互场景\n\n关键技术创新：\n1. 原生 Tool Use 无需额外微调\n2. 200K+ token 上下文窗口\n3. 多步骤任务的状态管理\n4. 通过 MCP 连接外部工具和系统'
+  },
+  {
+    id: 2, source: 'TechCrunch', quality: 'high', qualityScore: 88,
+    title: 'The AI Agent Wars: How Claude 4 Ignited a New Battle',
+    summary: 'Claude 4 的发布引发了 AI 行业的 Agent 竞赛，OpenAI、Google、微软纷纷加速 Agent 产品发布。',
+    publishedAt: '2026-04-18',
+    author: 'Sarah Chen',
+    reasoning: '行业视角的深度分析，揭示了多个厂商的响应策略和竞争动态。',
+    fullSummary: 'TechCrunch 分析了 Claude 4 发布后一周内整个行业的反应。OpenAI 紧急发布 Codex Agent 的功能更新，Google DeepMind 提前公布 Project Mariner 的细节，微软则加速了 Copilot Studio 的 Agent 构建功能。',
+    content: '过去一周，AI 行业经历了自 ChatGPT 发布以来最剧烈的连锁反应。\n\nOpenAI 的回应最为迅速——在 Claude 4 发布 48 小时内，他们更新了 Codex Agent，增加了多文件编辑和终端操作能力。\n\nGoogle DeepMind 也不甘示弱，Project Mariner 展示了浏览器内自主操作的能力，可以直接完成网页表单填写、信息检索等任务。\n\n微软选择了不同路径：通过 Copilot Studio 让企业用户自定义 Agent 工作流，定位为 "Agent 的 Agent"。'
+  },
+  {
+    id: 3, source: 'Ars Technica', quality: 'high', qualityScore: 82,
+    title: 'MCP Protocol: The HTTP of AI Agent Communication?',
+    summary: '深入分析 Anthropic 的 Model Context Protocol，探讨其成为 AI 工具互联标准的可能性与挑战。',
+    publishedAt: '2026-04-20',
+    author: 'Benj Edwards',
+    reasoning: '技术深度的协议分析，对 MCP 叙事线的核心支撑。',
+    fullSummary: 'MCP（Model Context Protocol）试图解决 AI Agent 生态的核心问题——工具互操作性。文章分析了 MCP 的技术架构、与 OpenAI Function Calling 的竞争关系，以及成为行业标准面临的障碍。',
+    content: 'MCP 的设计哲学是让 AI 模型能够以标准化方式发现和使用外部工具。类似于 HTTP 之于 Web，MCP 希望成为 AI Agent 与外部世界通信的标准协议。\n\n核心架构：\n- JSON-RPC 2.0 消息格式\n- 双向流式通信\n- 工具发现和能力协商\n- 沙箱化执行环境\n\n然而，标准化之路并不平坦。OpenAI 的 Function Calling v3 和 Google 的 Gemini Tools 都有各自的协议设计，三方尚未表现出互操作的意愿。'
+  },
+  {
+    id: 4, source: 'The Information', quality: 'med', qualityScore: 75,
+    title: 'Inside the AI Coding Assistant Boom: Usage Tripled in Q1',
+    summary: 'AI 编程工具的用户使用量在 2026 Q1 翻了三倍，Cursor 和 Claude Code 领跑市场。',
+    publishedAt: '2026-04-22',
+    author: 'Jhon Mannon',
+    reasoning: '市场数据支撑，量化了叙事的热度趋势。',
+    fullSummary: '报告数据显示 Cursor 月活用户达到 320 万，Claude Code 日均使用时长突破 45 分钟。AI 编程助手从 "偶尔使用" 变为 "日常依赖" 的拐点已经出现。',
+    content: '2026 年第一季度的数据显示，AI 编程工具的使用量出现了爆发性增长。\n\n关键数据：\n- Cursor: MAU 320 万，环比增长 180%\n- Claude Code: 日均使用时长 45 分钟，较上季度增长 220%\n- GitHub Copilot: 付费用户突破 500 万\n\n最引人注目的变化是使用模式的转变：从 "偶尔辅助" 到 "全程协作"。越来越多的开发者报告他们将 AI 编程工具作为主要编码方式。'
+  }
+];
+
+// ═══ Mock Events ═══
+const events = [
+  {
+    id: 1, date: '2026-04-15', type: 'launch', typeName: '发布',
+    name: 'Anthropic 发布 Claude 4 系列',
+    desc: 'Anthropic 正式发布 Claude 4 系列（Opus 4.7 / Sonnet 4.6 / Haiku 4.5），首次内置原生 Agent 能力。',
+    tags: ['Anthropic', 'Claude 4', 'AI Agent'],
+    sourceCount: 8, confidence: 95, ongoing: false
+  },
+  {
+    id: 2, date: '2026-04-16', type: 'reaction', typeName: '响应',
+    name: 'OpenAI 紧急更新 Codex Agent',
+    desc: 'Claude 4 发布 48 小时内，OpenAI 更新 Codex Agent，新增多文件编辑和终端操作能力。',
+    tags: ['OpenAI', 'Codex', 'Agent'],
+    sourceCount: 6, confidence: 90, ongoing: false,
+    cause: '触发'
+  },
+  {
+    id: 3, date: '2026-04-18', type: 'reaction', typeName: '响应',
+    name: 'Google 提前公布 Project Mariner',
+    desc: 'Google DeepMind 加速发布 Mariner 的浏览器自主操作功能演示。',
+    tags: ['Google', 'Mariner', 'DeepMind'],
+    sourceCount: 5, confidence: 85, ongoing: false,
+    cause: '竞争加速'
+  },
+  {
+    id: 4, date: '2026-04-20', type: 'analysis', typeName: '分析',
+    name: 'AI 安全研究者发现 Agent 对抗漏洞',
+    desc: '独立安全研究团队发布报告，揭示主流 Agent 框架在工具链式调用中存在的权限提升风险。',
+    tags: ['AI Safety', 'Tool Chaining', 'Vulnerability'],
+    sourceCount: 4, confidence: 78, ongoing: false,
+    cause: '安全隐忧浮现'
+  },
+  {
+    id: 5, date: '2026-04-25', type: 'regulation', typeName: '监管',
+    name: '美国参议院 AI Agent 听证会',
+    desc: '美国参议院商业委员会就 AI Agent 的安全和监管问题举行专题听证会。',
+    tags: ['US Senate', 'Regulation', 'AI Safety'],
+    sourceCount: 7, confidence: 92, ongoing: false,
+    cause: '安全报告推动'
+  },
+  {
+    id: 6, date: '2026-04-28', type: 'launch', typeName: '发布',
+    name: 'Cursor 3.0 发布全自主编码模式',
+    desc: 'Cursor 推出 "Autopilot" 模式，AI 可以自主完成从需求理解到代码提交的全流程。',
+    tags: ['Cursor', 'Autopilot', 'AI Coding'],
+    sourceCount: 3, confidence: 88, ongoing: true,
+    cause: '能力竞赛传导'
+  }
+];
+
+// ═══ Render Articles ═══
+function renderArticles() {
+  const grid = document.getElementById('articlesGrid');
+  grid.innerHTML = articles.map(a => `
+    <div class="article-card" data-id="${a.id}" onclick="selectArticle(${a.id})">
+      <div class="article-source-row">
+        <span class="article-source">${a.source}</span>
+        <span class="article-quality ${a.quality}">Q ${a.qualityScore}</span>
+      </div>
+      <div class="article-title">${a.title}</div>
+      <div class="article-summary">${a.summary}</div>
+      <div class="article-time">${a.publishedAt}</div>
+    </div>
+  `).join('');
+}
+
+function selectArticle(id) {
+  document.querySelectorAll('.article-card').forEach(el => el.classList.remove('selected'));
+  const card = document.querySelector(`.article-card[data-id="${id}"]`);
+  if (card) card.classList.add('selected');
+
+  const a = articles.find(x => x.id === id);
+  if (!a) return;
+
+  const reader = document.getElementById('articleReader');
+  reader.classList.add('open');
+  reader.innerHTML = `
+    <div class="reader-header">
+      <div class="reader-meta">
+        <span><i class="bi bi-newspaper"></i>${a.source}</span>
+        <span><i class="bi bi-calendar3"></i>${a.publishedAt}</span>
+        <span><i class="bi bi-person"></i>${a.author}</span>
+      </div>
+      <div class="reader-actions">
+        <button class="reader-btn primary" onclick="window.open('#','_blank')"><i class="bi bi-box-arrow-up-right"></i> 原文</button>
+        <button class="reader-btn" onclick="closeReader()"><i class="bi bi-x-lg"></i> 关闭</button>
+      </div>
+    </div>
+    <div class="reader-title">${a.title}</div>
+    <div class="reader-section">
+      <div class="reader-section-label">AI 推理</div>
+      <div class="reader-reasoning">${a.reasoning}</div>
+    </div>
+    <div class="reader-section">
+      <div class="reader-section-label">AI 摘要</div>
+      <div class="reader-summary">${a.fullSummary}</div>
+    </div>
+    <div class="reader-section">
+      <div class="reader-section-label">全文</div>
+      <div class="reader-content">${a.content.replace(/\n/g, '<br>')}</div>
+    </div>
+  `;
+  reader.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeReader() {
+  document.getElementById('articleReader').classList.remove('open');
+  document.querySelectorAll('.article-card').forEach(el => el.classList.remove('selected'));
+}
+
+// ═══ Render Timeline ═══
+function renderTimeline() {
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = events.map((e, i) => {
+    let html = '';
+    if (i > 0 && e.cause) {
+      html += `<div class="causal-link">${e.cause}</div>`;
+    }
+    html += `
+      <div class="event-node">
+        <div class="timeline-dot ${e.ongoing ? 'pulse' : ''}"></div>
+        <div class="event-top">
+          <span class="event-date">${e.date}</span>
+          <div style="display:flex; gap:6px; align-items:center;">
+            ${e.ongoing ? '<span class="event-ongoing">进行中</span>' : ''}
+            <span class="event-type-badge type-${e.type}">${e.typeName}</span>
+          </div>
+        </div>
+        <div class="event-name">${e.name}</div>
+        <div class="event-desc">${e.desc}</div>
+        <div class="event-tags">
+          ${e.tags.map(t => `<span class="event-tag">${t}</span>`).join('')}
+        </div>
+        <div class="event-stats">
+          <span>源 ${e.sourceCount}</span>
+          <span>置信度 ${e.confidence}%</span>
+        </div>
+      </div>
+    `;
+    return html;
+  }).join('');
+}
+
+// ═══ Community selector ═══
+document.querySelectorAll('.community-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.community-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ═══ Init ═══
+renderArticles();
+renderTimeline();
+</script>
+
+</body>
+</html>

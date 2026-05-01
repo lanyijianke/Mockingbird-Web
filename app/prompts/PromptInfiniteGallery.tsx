@@ -38,6 +38,7 @@ export default function PromptInfiniteGallery({
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const sentinelRef = useRef<HTMLDivElement | null>(null);
+    const loadingRef = useRef(false);
     const resetKey = buildPromptGalleryResetKey({ category, q });
 
     const canLoadMore = hasNextPromptPage(page, totalPages);
@@ -47,11 +48,12 @@ export default function PromptInfiniteGallery({
         setPage(initialPage);
         setIsLoading(false);
         setError(null);
+        loadingRef.current = false;
     }, [initialItems, initialPage, resetKey]);
 
     const loadNextPage = useCallback(async () => {
-        if (isLoading || !hasNextPromptPage(page, totalPages)) return;
-
+        if (loadingRef.current || !hasNextPromptPage(page, totalPages)) return;
+        loadingRef.current = true;
         setIsLoading(true);
         setError(null);
 
@@ -76,8 +78,9 @@ export default function PromptInfiniteGallery({
             setError(err instanceof Error ? err.message : '加载失败');
         } finally {
             setIsLoading(false);
+            loadingRef.current = false;
         }
-    }, [category, isLoading, page, pageSize, q, totalPages]);
+    }, [category, page, pageSize, q, totalPages]);
 
     useEffect(() => {
         const sentinel = sentinelRef.current;
