@@ -5,7 +5,6 @@ export interface SiteSeoConfig {
     brandName: string;
     siteName: string;
     alternateName: string;
-    academyName: string;
     icpNumber: string;
     icpUrl: string;
     homeTitle: string;
@@ -58,7 +57,6 @@ export function getSiteSeoConfig(): SiteSeoConfig {
         brandName: brand.brandName,
         siteName: brand.siteName,
         alternateName: brand.alternateName,
-        academyName: brand.academyName,
         icpNumber: brand.icpNumber,
         icpUrl: brand.icpUrl,
         homeTitle: brand.homeTitle,

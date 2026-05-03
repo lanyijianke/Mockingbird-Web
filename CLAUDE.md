@@ -41,7 +41,7 @@ npm run invite:generate  # Generate membership invite codes
 
 ### Database
 - **MySQL** via mysql2/promise connection pool at `mockingbird_knowledge` (configurable via `MYSQL_URL`)
-- Schema auto-initialized in `lib/init-schema.ts` — tables: Users, Sessions, OauthAccounts, Prompts, SystemLogs, InvitationCodes, InvitationRedemptions, AcademyContent
+- Schema auto-initialized in `lib/init-schema.ts` — tables: Users, Sessions, OauthAccounts, Prompts, SystemLogs, InvitationCodes, InvitationRedemptions
 - Tests require `MYSQL_URL` env var pointing to a MySQL instance with CREATE DATABASE permission
 
 ### Role hierarchy (ascending)
@@ -50,7 +50,7 @@ npm run invite:generate  # Generate membership invite codes
 ### Authentication
 - Email/password + OAuth (GitHub, Google)
 - Session-based with HTTP-only cookies (nanoid tokens, 30-day TTL)
-- Route protection via `middleware.ts` — `/profile`, `/membership`, `/academy` require auth; academy requires active membership
+- Route protection via `middleware.ts` — `/profile`, `/membership` require auth
 
 ### Content sources
 - **Articles:** Local markdown directories with frontmatter, multi-site support (`ai`, `finance`), served via manifest-based indexing

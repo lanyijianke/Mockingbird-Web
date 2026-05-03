@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import NavAuthButton from '@/app/NavAuthButton';
+import { ToastProvider } from '@/app/ToastContext';
 import { getArticleListPath } from '@/lib/articles/article-route-paths';
 import { buildAbsoluteUrl, getSiteSeoConfig } from '@/lib/seo/config';
 import { buildRootMetadata } from '@/lib/seo/metadata';
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
       </head>
       <body>
+        <ToastProvider>
         {/* ═══ Top Navigation (Every.to Style) ═══ */}
         <nav className="top-nav">
           <div className="nav-left" />
@@ -68,7 +70,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </div>
 
-            <Link href="/academy" className="nav-link">学社</Link>
             <NavAuthButton />
           </div>
         </nav>
@@ -95,6 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* ═══ WebSite JSON-LD (全局结构化数据) ═══ */}
         <JsonLdScript data={buildWebSiteJsonLd()} />
+        </ToastProvider>
       </body>
     </html>
   );

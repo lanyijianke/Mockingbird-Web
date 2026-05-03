@@ -19,13 +19,6 @@ export const MEMBERSHIP_ROLES: Role[] = [
     'founder_member',
 ];
 
-export const ACADEMY_ALLOWED_ROLES: Role[] = [
-    'junior_member',
-    'senior_member',
-    'founder_member',
-    'admin',
-];
-
 export const REDEEM_ALLOWED_ROLES: Role[] = [
     'user',
     'junior_member',
@@ -58,20 +51,6 @@ export function isExpiredMembership(role: string, membershipExpiresAt?: string |
 
     const expiryTimestamp = getMembershipExpiryTimestamp(membershipExpiresAt);
     return expiryTimestamp !== null && expiryTimestamp <= Date.now();
-}
-
-export function hasAcademyAccess(role: string, membershipExpiresAt?: string | null): boolean {
-    const normalizedRole = normalizeRole(role);
-
-    if (normalizedRole === 'admin') {
-        return true;
-    }
-
-    if (!ACADEMY_ALLOWED_ROLES.includes(normalizedRole as Role)) {
-        return false;
-    }
-
-    return !isExpiredMembership(normalizedRole, membershipExpiresAt);
 }
 
 export function getDefaultMembershipDurationDays(role: string): number {

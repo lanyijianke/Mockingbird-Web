@@ -2,7 +2,6 @@ export interface SiteBrandConfig {
     brandName: string;
     siteName: string;
     alternateName: string;
-    academyName: string;
     icpNumber: string;
     icpUrl: string;
     homeTitle: string;
@@ -26,7 +25,6 @@ export function getSiteBrandConfig(): SiteBrandConfig {
     const brandName = readConfiguredValue('NEXT_PUBLIC_SITE_BRAND_NAME', 'SITE_BRAND_NAME') || '知更鸟';
     const siteName = readConfiguredValue('NEXT_PUBLIC_SITE_NAME', 'SITE_NAME') || '知更鸟知识库';
     const alternateName = readConfiguredValue('NEXT_PUBLIC_SITE_ALTERNATE_NAME', 'SITE_ALTERNATE_NAME') || 'Mockingbird Knowledge';
-    const academyName = readConfiguredValue('NEXT_PUBLIC_SITE_ACADEMY_NAME', 'SITE_ACADEMY_NAME') || `${brandName}学社`;
     const icpNumber = readConfiguredValue('NEXT_PUBLIC_SITE_ICP_NUMBER', 'SITE_ICP_NUMBER') || '冀ICP备2024081438号';
     const icpUrl = readConfiguredValue('NEXT_PUBLIC_SITE_ICP_URL', 'SITE_ICP_URL') || 'https://beian.miit.gov.cn/';
     const homeTitle = readConfiguredValue('NEXT_PUBLIC_SITE_HOME_TITLE', 'SITE_HOME_TITLE') || `${siteName} - 泛 AI 知识平台`;
@@ -40,7 +38,6 @@ export function getSiteBrandConfig(): SiteBrandConfig {
         brandName,
         siteName,
         alternateName,
-        academyName,
         icpNumber,
         icpUrl,
         homeTitle,

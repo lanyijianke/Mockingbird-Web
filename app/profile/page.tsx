@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { getSiteBrandConfig } from '@/lib/site-config';
 import {
   getMembershipExpiryTimestamp,
-  hasAcademyAccess,
   isExpiredMembership,
   isMembershipRole,
 } from '@/lib/auth/roles';
@@ -77,7 +76,6 @@ export default function ProfilePage() {
   }
 
   const roleInfo = ROLE_LABELS[user.role] || ROLE_LABELS.user;
-  const canEnterAcademy = hasAcademyAccess(user.role, user.membershipExpiresAt);
   const canRedeemMembership = user.role === 'user' || isExpiredMembership(user.role, user.membershipExpiresAt);
   const membershipExpiryTimestamp = getMembershipExpiryTimestamp(user.membershipExpiresAt);
 
@@ -183,15 +181,9 @@ export default function ProfilePage() {
 
         {/* Quick Actions */}
         <div className="profile-actions">
-          {canEnterAcademy && (
-            <Link href="/academy" className="profile-action-link">
-              <i className="bi bi-mortarboard" /> 进入学社
-            </Link>
-          )}
-
           {canRedeemMembership && (
             <Link href="/membership" className="profile-action-link">
-              <i className="bi bi-key" /> 加入{SITE_BRAND.academyName}
+              <i className="bi bi-key" /> 会员兑换
             </Link>
           )}
 

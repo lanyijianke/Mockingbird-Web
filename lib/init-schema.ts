@@ -242,25 +242,4 @@ export async function initDatabase(conn: PoolConnection): Promise<void> {
         WHERE MembershipDurationDays IS NULL OR MembershipDurationDays <= 0
     `);
 
-    // ════════════════════════════════════════════════════════════════
-    // 学院内容
-    // ════════════════════════════════════════════════════════════════
-
-    await conn.query(`
-        CREATE TABLE IF NOT EXISTS AcademyContent (
-            Id           INT PRIMARY KEY AUTO_INCREMENT,
-            Slug         VARCHAR(200) NOT NULL,
-            Title        VARCHAR(500) NOT NULL,
-            Summary      TEXT DEFAULT NULL,
-            Content      LONGTEXT DEFAULT NULL,
-            Category     VARCHAR(100) DEFAULT '',
-            CoverImageUrl VARCHAR(1000) DEFAULT NULL,
-            Status       VARCHAR(50) NOT NULL DEFAULT 'draft',
-            PublishedAt  DATETIME DEFAULT NULL,
-            CreatedAt    DATETIME DEFAULT NOW(),
-            UpdatedAt    DATETIME DEFAULT NULL,
-            UNIQUE INDEX idx_academy_slug (Slug),
-            INDEX idx_academy_status (Status)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    `);
 }

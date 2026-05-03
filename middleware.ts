@@ -19,7 +19,7 @@ const PUBLIC_PREFIXES = [
 
 const GUEST_ONLY_PATHS = ['/login', '/register'];
 const SHARED_AUTH_PATHS = ['/forgot-password', '/reset-password', '/verify-email'];
-const PROTECTED_PREFIXES = ['/profile', '/membership', '/academy'];
+const PROTECTED_PREFIXES = ['/profile', '/membership'];
 
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;

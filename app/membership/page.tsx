@@ -3,10 +3,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSiteBrandConfig } from '@/lib/site-config';
-import { hasAcademyAccess } from '@/lib/auth/roles';
 
-const SITE_BRAND = getSiteBrandConfig();
 
 interface UserInfo {
   id: string;
@@ -39,12 +36,6 @@ export default function MembershipPage() {
           return;
         }
         setUser(nextUser);
-
-        // Already has academy access -> redirect to academy
-        if (hasAcademyAccess(nextUser.role, nextUser.membershipExpiresAt)) {
-          router.push('/academy');
-          return;
-        }
       } catch {
         router.push('/login?callbackUrl=/membership');
       } finally {
@@ -103,17 +94,17 @@ export default function MembershipPage() {
       <div className="membership-page">
         <div className="membership-card">
           <div className="membership-success" style={{ padding: '1rem', marginBottom: '1.5rem' }}>
-            欢迎加入{SITE_BRAND.academyName}
+            欢迎加入会员
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-            你已成功成为学社成员，可以访问所有学社内容。
+            你已成功成为会员。
           </p>
           <Link
-            href="/academy"
+            href="/"
             className="auth-button"
             style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}
           >
-            进入学社
+            返回首页
           </Link>
         </div>
       </div>
@@ -123,9 +114,9 @@ export default function MembershipPage() {
   return (
     <div className="membership-page">
       <div className="membership-card">
-        <h1 className="membership-heading">加入{SITE_BRAND.academyName}</h1>
+        <h1 className="membership-heading">会员兑换</h1>
         <p className="membership-desc">
-          输入邀请码，解锁学社会员专属内容。
+          输入邀请码，解锁会员专属功能。
         </p>
 
         <form className="auth-form" onSubmit={handleSubmit}>

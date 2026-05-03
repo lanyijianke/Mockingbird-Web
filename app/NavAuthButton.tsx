@@ -3,10 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { getSiteBrandConfig } from '@/lib/site-config';
-import { hasAcademyAccess, isExpiredMembership } from '@/lib/auth/roles';
+import { isExpiredMembership } from '@/lib/auth/roles';
+import { useToast } from '@/app/ToastContext';
 
-const SITE_BRAND = getSiteBrandConfig();
 
 interface UserInfo {
   id: string;
@@ -25,6 +24,7 @@ export default function NavAuthButton() {
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     async function fetchUser() {
@@ -82,14 +82,20 @@ export default function NavAuthButton() {
   // Not logged in
   if (!user) {
     return (
-      <Link href="/login" className="nav-auth-login">
+      <a
+        href="/login"
+        className="nav-auth-login"
+        onClick={(e) => {
+          e.preventDefault();
+          showToast('功能建设中，敬请期待 🛠');
+        }}
+      >
         登录
-      </Link>
+      </a>
     );
   }
 
   // Logged in
-  const canEnterAcademy = hasAcademyAccess(user.role, user.membershipExpiresAt);
   const canRedeemMembership = user.role === 'user' || isExpiredMembership(user.role, user.membershipExpiresAt);
 
   return (
@@ -125,16 +131,6 @@ export default function NavAuthButton() {
           >
             <i className="bi bi-person" /> 个人中心
           </Link>
-
-          {canEnterAcademy && (
-            <Link
-              href="/academy"
-              className="nav-auth-dropdown-item"
-              onClick={() => setOpen(false)}
-            >
-              <i className="bi bi-mortarboard" /> {SITE_BRAND.academyName}
-            </Link>
-          )}
 
           {canRedeemMembership && (
             <Link
